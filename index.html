@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LelepaDocs</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,400&family=Inter:wght@300;400;500;600&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,400&family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Nunito:wght@300;400;600;700&family=Josefin+Sans:wght@300;400;600&family=Spectral:ital,wght@0,300;0,400;0,600;1,400&family=Raleway:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  /* ── Refined neutral palette ─────────────────────────────
+     Base: warm slate grays, not brown-tinged.
+     Accent: indigo-blue — calm, professional, pairs with everything.
+     Paper: pure white for maximum readability.
+  ── */
+  --bg:          #F0F2F5;   /* cool light gray page surround   */
+  --paper:       #FFFFFF;   /* crisp white page                */
+  --ink:         #1E2128;   /* near-black with cool undertone  */
+  --ink-muted:   #6C7280;   /* medium gray for labels/hints    */
+  --ink-faint:   #9CA3AF;   /* lightest readable gray          */
+  --accent:      #4F6AF5;   /* indigo-blue — primary action    */
+  --accent-dark: #3A52D4;   /* hover / pressed accent          */
+  --accent-light:#EEF1FE;   /* accent tint for active states   */
+  --accent-glow: rgba(79,106,245,.18);
+  --border:      #DDE1E9;   /* subtle cool-gray border         */
+  --border-dark: #C4C9D6;   /* slightly darker border on hover */
+  --toolbar-bg:  #FFFFFF;
+  --shadow:      0 1px 4px rgba(30,33,40,.08), 0 4px 16px rgba(30,33,40,.05);
+  --shadow-deep: 0 4px 24px rgba(30,33,40,.10), 0 12px 48px rgba(30,33,40,.08);
+  --radius:      8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;display:flex;flex-direction:column;}
+
+/* Header */
+.app-header{background:var(--toolbar-bg);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;gap:16px;height:54px;position:sticky;top:0;z-index:200;box-shadow:var(--shadow);}
+.logo-icon{width:30px;height:30px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:700;font-family:'Lora',serif;flex-shrink:0;box-shadow:0 2px 8px var(--accent-glow);}
+.logo-text{font-family:'Lora',serif;font-size:17px;font-weight:600;color:var(--ink);}
+.doc-title-wrap{flex:1;}
+#docTitle{font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;color:var(--ink);border:1px solid transparent;border-radius:6px;padding:5px 9px;background:transparent;width:100%;max-width:380px;transition:.18s;}
+#docTitle:hover{border-color:var(--border);background:var(--bg);}
+#docTitle:focus{outline:none;border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px var(--accent-glow);}
+.header-actions{display:flex;gap:8px;flex-shrink:0;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:6px;font-size:12.5px;font-weight:500;cursor:pointer;border:none;transition:.15s;font-family:'DM Sans',sans-serif;white-space:nowrap;}
+.btn-ghost{background:transparent;color:var(--ink-muted);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--bg);color:var(--ink);border-color:var(--border-dark);}
+.btn-accent{background:var(--accent);color:#fff;box-shadow:0 2px 8px var(--accent-glow);}
+.btn-accent:hover{background:var(--accent-dark);box-shadow:0 3px 12px var(--accent-glow);}
+
+/* Toolbar */
+.toolbar{background:var(--toolbar-bg);border-bottom:1px solid var(--border);padding:4px 14px;display:flex;align-items:center;gap:2px;flex-wrap:wrap;position:sticky;top:54px;z-index:199;}
+.tb-sep{width:1px;height:20px;background:var(--border);margin:0 5px;flex-shrink:0;}
+
+/* CRITICAL: toolbar mousedown=preventDefault — editor NEVER loses focus */
+.tb-btn{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;padding:0 5px;border-radius:5px;border:none;background:transparent;cursor:pointer;color:var(--ink-muted);font-size:13px;font-weight:600;transition:.1s;flex-shrink:0;font-family:'DM Sans',sans-serif;-webkit-user-select:none;user-select:none;}
+.tb-btn:hover{background:var(--bg);color:var(--ink);}
+.tb-btn.on{background:var(--accent-light);color:var(--accent);}
+.tb-btn svg{width:14px;height:14px;fill:currentColor;pointer-events:none;}
+.tb-sel{border:1px solid var(--border);border-radius:5px;background:var(--toolbar-bg);color:var(--ink);font-size:12px;font-family:'DM Sans',sans-serif;padding:3px 6px;height:28px;cursor:pointer;transition:.1s;}
+.tb-sel:hover{border-color:var(--border-dark);}
+.tb-sel:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-glow);}
+
+/* Color button */
+.clr-btn{position:relative;display:inline-flex;flex-direction:column;align-items:center;cursor:pointer;flex-shrink:0;-webkit-user-select:none;user-select:none;}
+.clr-face{width:27px;height:27px;border-radius:5px;border:1px solid var(--border);background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;transition:.1s;}
+.clr-face:hover{background:var(--bg);border-color:var(--border-dark);}
+.clr-letter{font-size:13px;font-weight:700;line-height:1;pointer-events:none;}
+.clr-bar{height:4px;width:18px;border-radius:2px;margin-top:2px;pointer-events:none;}
+.clr-pop{display:none;position:absolute;top:calc(100% + 6px);left:0;background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;box-shadow:var(--shadow-deep);z-index:9999;width:196px;}
+.clr-pop.open{display:block;animation:popIn .15s ease;}
+@keyframes popIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:none;}}
+.clr-pop-title{font-size:10px;color:var(--ink-faint);font-weight:600;text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px;}
+.clr-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;margin-bottom:9px;}
+.clr-sw{width:18px;height:18px;border-radius:4px;cursor:pointer;border:1px solid rgba(0,0,0,.08);transition:transform .1s,box-shadow .1s;-webkit-user-select:none;user-select:none;}
+.clr-sw:hover{transform:scale(1.28);box-shadow:0 2px 8px rgba(0,0,0,.22);}
+.clr-custom{display:flex;align-items:center;gap:7px;padding-top:3px;border-top:1px solid var(--border);}
+.clr-custom span{font-size:11px;color:var(--ink-muted);padding-top:6px;}
+.clr-custom input[type=color]{width:34px;height:22px;border:1px solid var(--border);border-radius:4px;cursor:pointer;padding:1px 2px;margin-top:6px;}
+
+/* Editor */
+.editor-area{flex:1;overflow-y:auto;padding:36px 20px 80px;display:flex;flex-direction:column;align-items:center;}
+.page{width:100%;max-width:816px;background:var(--paper);box-shadow:var(--shadow-deep);border-radius:3px;min-height:1056px;padding:72px 80px;position:relative;}
+#editor{min-height:912px;outline:none;font-family:'Lora',serif;font-size:11.5pt;line-height:1.8;color:var(--ink);caret-color:var(--accent);user-select:text;-webkit-user-select:text;position:relative;z-index:1;}
+#editor h1{font-size:26pt;line-height:1.2;margin:16px 0 8px;font-weight:700;}
+#editor h2{font-size:19pt;line-height:1.3;margin:14px 0 6px;font-weight:600;}
+#editor h3{font-size:14pt;line-height:1.4;margin:12px 0 4px;font-weight:600;}
+#editor h4{font-size:12pt;line-height:1.5;margin:10px 0 4px;font-weight:600;}
+#editor p{margin:0 0 6px;}
+#editor ul,#editor ol{padding-left:24px;margin:6px 0;}
+#editor li{margin:3px 0;}
+#editor blockquote{border-left:3px solid var(--accent);padding-left:16px;color:var(--ink-muted);font-style:italic;margin:12px 0;}
+#editor table{border-collapse:collapse;width:100%;margin:12px 0;font-size:10.5pt;}
+#editor td,#editor th{border:1px solid var(--border);padding:8px 12px;vertical-align:top;min-width:60px;}
+#editor th{background:var(--bg);font-weight:600;}
+#editor hr{border:none;border-top:1px solid var(--border);margin:20px 0;}
+#editor code{font-family:'Courier New',monospace;background:var(--bg);padding:1px 5px;border-radius:3px;font-size:.9em;color:#3A52D4;}
+#editor pre{background:#1E2128;color:#E2E8F0;padding:16px;border-radius:8px;overflow-x:auto;margin:12px 0;font-family:'Courier New',monospace;font-size:9.5pt;line-height:1.6;}
+#editor a{color:var(--accent);text-decoration:underline;text-underline-offset:2px;}
+
+/* ── Shared free-float system (images & LaTeX) ── */
+/* Images */
+.free-img{position:absolute;cursor:move;user-select:none;-webkit-user-select:none;z-index:10;touch-action:none;}
+.free-img img{display:block;max-width:none;pointer-events:none;user-select:none;border-radius:3px;}
+.free-img.selected img{outline:2px solid var(--accent);border-radius:3px;box-shadow:0 0 0 4px var(--accent-glow);}
+
+/* LaTeX floats */
+.free-ltx{position:absolute;cursor:move;user-select:none;-webkit-user-select:none;z-index:10;touch-action:none;min-width:60px;min-height:30px;}
+.free-ltx-inner{background:#F8F9FF;border:1.5px solid var(--border);border-radius:8px;padding:10px 16px;font-size:1em;line-height:1.4;pointer-events:none;user-select:none;white-space:nowrap;}
+.free-ltx.selected .free-ltx-inner{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
+
+/* Shared resize handles */
+.rh{position:absolute;width:9px;height:9px;background:#fff;border:2px solid var(--accent);border-radius:2px;z-index:20;display:none;box-shadow:0 1px 3px rgba(79,106,245,.3);}
+.free-img.selected .rh,.free-ltx.selected .rh{display:block;}
+.rh.nw{top:-5px;left:-5px;cursor:nw-resize;}
+.rh.n{top:-5px;left:calc(50% - 4px);cursor:n-resize;}
+.rh.ne{top:-5px;right:-5px;cursor:ne-resize;}
+.rh.w{top:calc(50% - 4px);left:-5px;cursor:w-resize;}
+.rh.e{top:calc(50% - 4px);right:-5px;cursor:e-resize;}
+.rh.sw{bottom:-5px;left:-5px;cursor:sw-resize;}
+.rh.s{bottom:-5px;left:calc(50% - 4px);cursor:s-resize;}
+.rh.se{bottom:-5px;right:-5px;cursor:se-resize;}
+
+/* Shared mini toolbar */
+.float-bar{display:none;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:#1E2128;border-radius:7px;padding:4px 6px;white-space:nowrap;z-index:30;align-items:center;gap:2px;box-shadow:0 4px 16px rgba(30,33,40,.3);}
+.free-img.selected .float-bar,.free-ltx.selected .float-bar{display:flex;}
+.fb-btn{background:transparent;border:none;color:#9CA3AF;cursor:pointer;font-size:11px;padding:3px 8px;border-radius:5px;font-family:'DM Sans',sans-serif;transition:.1s;-webkit-user-select:none;user-select:none;}
+.fb-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+.fb-sep{width:1px;height:14px;background:rgba(255,255,255,.15);}
+
+/* Size badge */
+.size-badge{display:none;position:absolute;bottom:5px;right:5px;background:rgba(30,33,40,.7);color:#fff;font-size:10px;padding:2px 6px;border-radius:3px;pointer-events:none;font-family:'DM Sans',sans-serif;letter-spacing:.3px;}
+.free-img.resizing .size-badge,.free-ltx.resizing .size-badge{display:block;}
+
+/* Inline latex placeholder (still in editor but NOT free-float) – removed, all latex is now free-float */
+
+/* Status */
+.status-bar{position:fixed;bottom:0;left:0;right:0;height:26px;background:var(--toolbar-bg);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 18px;gap:18px;font-size:11px;color:var(--ink-faint);z-index:90;}
+
+/* Modals */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(30,33,40,.45);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--paper);border-radius:12px;padding:28px;width:450px;max-width:92vw;box-shadow:var(--shadow-deep);animation:mIn .2s ease;}
+@keyframes mIn{from{opacity:0;transform:scale(.96) translateY(8px);}to{opacity:1;transform:none;}}
+.modal h3{font-family:'Lora',serif;font-size:16px;font-weight:600;margin-bottom:16px;color:var(--ink);}
+.modal label{font-size:11.5px;color:var(--ink-muted);display:block;margin-bottom:4px;font-weight:500;}
+.modal input,.modal textarea,.modal select{width:100%;border:1.5px solid var(--border);border-radius:7px;padding:9px 11px;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--ink);background:#fff;margin-bottom:12px;transition:.18s;}
+.modal input:focus,.modal textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
+.modal textarea{resize:vertical;min-height:80px;font-family:'Courier New',monospace;}
+.modal-actions{display:flex;gap:9px;justify-content:flex-end;margin-top:4px;}
+.latex-preview{background:var(--bg);border-radius:7px;padding:14px;margin-bottom:12px;text-align:center;min-height:50px;border:1.5px solid var(--border);}
+.tbl-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+
+/* Progress */
+.prog-overlay{display:none;position:fixed;inset:0;background:rgba(30,33,40,.55);z-index:2000;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
+.prog-overlay.open{display:flex;}
+.prog-box{background:var(--paper);border-radius:12px;padding:32px 44px;text-align:center;box-shadow:var(--shadow-deep);}
+.prog-box p{font-family:'DM Sans',sans-serif;font-size:13.5px;color:var(--ink-muted);margin-top:12px;}
+.spinner{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+[data-tip]{position:relative;}
+[data-tip]:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1E2128;color:#fff;font-size:10.5px;padding:4px 8px;border-radius:5px;white-space:nowrap;pointer-events:none;z-index:9999;font-family:'DM Sans',sans-serif;box-shadow:0 3px 10px rgba(30,33,40,.25);}
+
+@media(max-width:600px){.page{padding:40px 22px;}.logo-text{display:none;}}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+    <div class="logo-icon">D</div>
+    <span class="logo-text">LelepaDocs</span>
+  </div>
+  <div class="doc-title-wrap">
+    <input type="text" id="docTitle" value="Untitled Document" spellcheck="false">
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-ghost" id="btnExportDocx">
+      <svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>DOCX
+    </button>
+    <button class="btn btn-accent" id="btnExportPDF">
+      <svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:currentColor"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/></svg>PDF
+    </button>
+  </div>
+</header>
+
+<div class="toolbar" id="toolbar">
+  <select class="tb-sel" id="selBlock" style="width:98px">
+    <option value="p">Normal</option><option value="h1">Heading 1</option>
+    <option value="h2">Heading 2</option><option value="h3">Heading 3</option>
+    <option value="h4">Heading 4</option><option value="blockquote">Quote</option>
+    <option value="pre">Code Block</option>
+  </select>
+  <div class="tb-sep"></div>
+  <select class="tb-sel" id="selFont" style="width:130px">
+    <option value="'Lora',serif">Lora</option>
+    <option value="'Playfair Display',serif">Playfair Display</option>
+    <option value="'Merriweather',serif">Merriweather</option>
+    <option value="'Source Serif 4',serif">Source Serif 4</option>
+    <option value="'EB Garamond',serif">EB Garamond</option>
+    <option value="'Crimson Pro',serif">Crimson Pro</option>
+    <option value="'Spectral',serif">Spectral</option>
+    <option value="'Inter',sans-serif">Inter</option>
+    <option value="'DM Sans',sans-serif">DM Sans</option>
+    <option value="'Nunito',sans-serif">Nunito</option>
+    <option value="'Josefin Sans',sans-serif">Josefin Sans</option>
+    <option value="'Raleway',sans-serif">Raleway</option>
+    <option value="Georgia,serif">Georgia</option>
+    <option value="'Times New Roman',serif">Times New Roman</option>
+    <option value="Arial,sans-serif">Arial</option>
+    <option value="'Courier New',monospace">Courier New</option>
+  </select>
+  <select class="tb-sel" id="selSize" style="width:56px">
+    <option value="8">8</option><option value="9">9</option><option value="10">10</option>
+    <option value="11">11</option><option value="12" selected>12</option><option value="14">14</option>
+    <option value="16">16</option><option value="18">18</option><option value="20">20</option>
+    <option value="24">24</option><option value="28">28</option><option value="32">32</option>
+    <option value="36">36</option><option value="48">48</option><option value="60">60</option><option value="72">72</option>
+  </select>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" id="btnBold"      data-tip="Bold (Ctrl+B)"><b>B</b></button>
+  <button class="tb-btn" id="btnItalic"    data-tip="Italic (Ctrl+I)"><i style="font-style:italic">I</i></button>
+  <button class="tb-btn" id="btnUnderline" data-tip="Underline (Ctrl+U)" style="text-decoration:underline">U</button>
+  <button class="tb-btn" id="btnStrike"    data-tip="Strikethrough" style="text-decoration:line-through">S</button>
+  <button class="tb-btn" id="btnSuper"     data-tip="Superscript">x²</button>
+  <button class="tb-btn" id="btnSub"       data-tip="Subscript">x₂</button>
+  <div class="tb-sep"></div>
+
+  <!-- TEXT COLOR -->
+  <div class="clr-btn" id="wrapTC" data-tip="Text color">
+    <div class="clr-face" id="faceTC">
+      <span class="clr-letter" id="letterTC" style="color:#1A1714">A</span>
+      <div  class="clr-bar"   id="barTC"     style="background:#1A1714"></div>
+    </div>
+    <div class="clr-pop" id="popTC">
+      <div class="clr-pop-title">Text Color</div>
+      <div class="clr-grid" id="gridTC"></div>
+      <div class="clr-custom"><span>Custom:</span><input type="color" id="customTC" value="#1A1714"></div>
+    </div>
+  </div>
+
+  <!-- HIGHLIGHT COLOR -->
+  <div class="clr-btn" id="wrapHL" data-tip="Highlight" style="margin-left:3px">
+    <div class="clr-face" id="faceHL">
+      <span class="clr-letter" style="color:#1A1714">H</span>
+      <div  class="clr-bar"   id="barHL" style="background:#FFE066"></div>
+    </div>
+    <div class="clr-pop" id="popHL">
+      <div class="clr-pop-title">Highlight</div>
+      <div class="clr-grid" id="gridHL"></div>
+      <div class="clr-custom"><span>Custom:</span><input type="color" id="customHL" value="#FFE066"></div>
+    </div>
+  </div>
+
+  <div class="tb-sep"></div>
+  <button class="tb-btn" id="btnAlL" data-tip="Left"><svg viewBox="0 0 24 24"><path d="M3 3h18v2H3zm0 4h12v2H3zm0 4h18v2H3zm0 4h12v2H3zm0 4h18v2H3z"/></svg></button>
+  <button class="tb-btn" id="btnAlC" data-tip="Center"><svg viewBox="0 0 24 24"><path d="M3 3h18v2H3zm3 4h12v2H6zm-3 4h18v2H3zm3 4h12v2H6zm-3 4h18v2H3z"/></svg></button>
+  <button class="tb-btn" id="btnAlR" data-tip="Right"><svg viewBox="0 0 24 24"><path d="M3 3h18v2H3zm6 4h12v2H9zm-6 4h18v2H3zm6 4h12v2H9zm-6 4h18v2H3z"/></svg></button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" id="btnUL"  data-tip="Bullets"><svg viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4zM2 6.5a1 1 0 1 1 2 0 1 1 0 0 1-2 0zm0 5a1 1 0 1 1 2 0 1 1 0 0 1-2 0zm0 5a1 1 0 1 1 2 0 1 1 0 0 1-2 0z"/></svg></button>
+  <button class="tb-btn" id="btnOL"  data-tip="Numbered"><svg viewBox="0 0 24 24"><path d="M2 17h2v.5H3v1h1v.5H2v1h3v-4H2zm1-9h1V4H2v1h1zm-1 3h1.8L2 13.1v.9h3v-1H3.2L5 10.9V10H2zm5-6v2h14V5zm0 14h14v-2H7zm0-6h14v-2H7z"/></svg></button>
+  <button class="tb-btn" id="btnIn"  data-tip="Indent"><svg viewBox="0 0 24 24"><path d="M3 3h18v2H3zm0 4l5 4-5 4V7zm5 10h13v-2H8zm0-4h13v-2H8zm0-4h13V7H8z"/></svg></button>
+  <button class="tb-btn" id="btnOut" data-tip="Outdent"><svg viewBox="0 0 24 24"><path d="M3 3h18v2H3zm5 14h13v-2H8zm0-4h13v-2H8zm0-4h13V7H8zm-5 0l5 4-5 4V9z"/></svg></button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" id="btnImg"   style="width:auto;padding:0 8px;font-size:11px" data-tip="Insert image">
+    <svg viewBox="0 0 24 24" style="width:13px;height:13px;margin-right:3px;fill:currentColor"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>Image
+  </button>
+  <button class="tb-btn" id="btnTbl"   style="width:auto;padding:0 8px;font-size:11px" data-tip="Insert table">
+    <svg viewBox="0 0 24 24" style="width:13px;height:13px;margin-right:3px;fill:currentColor"><path d="M3 3h18v18H3V3zm2 2v4h4V5H5zm0 6v4h4v-4H5zm0 6v4h4v-4H5zm6-12v4h4V5h-4zm0 6v4h4v-4h-4zm0 6v4h4v-4h-4zm6-12v4h4V5h-4zm0 6v4h4v-4h-4zm0 6v4h4v-4h-4z"/></svg>Table
+  </button>
+  <button class="tb-btn" id="btnLtx"   style="width:auto;padding:0 8px;font-size:11px" data-tip="Insert LaTeX">∑ LaTeX</button>
+  <button class="tb-btn" id="btnLnk"   style="width:auto;padding:0 8px;font-size:11px" data-tip="Insert link">
+    <svg viewBox="0 0 24 24" style="width:13px;height:13px;margin-right:3px;fill:currentColor"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>Link
+  </button>
+  <button class="tb-btn" id="btnHR"    style="width:auto;padding:0 8px;font-size:11px">— HR</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" id="btnClr"  data-tip="Clear formatting"><svg viewBox="0 0 24 24"><path d="M3.27 5L2 6.27l6.97 6.97L6.5 19h3l1.57-3.66L16.73 21 18 19.73 3.27 5zM6 5v.18L8.82 8h2.4l-.72 1.68 2.1 2.1L14.21 8H20V5H6z"/></svg></button>
+  <button class="tb-btn" id="btnUndo" data-tip="Undo"><svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg></button>
+  <button class="tb-btn" id="btnRedo" data-tip="Redo"><svg viewBox="0 0 24 24"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg></button>
+</div>
+
+<div class="editor-area">
+  <div class="page" id="page">
+    <div id="editor" contenteditable="true" spellcheck="true">
+      <h1>Welcome to Docs</h1>
+      <p>Start writing here. Use the toolbar to format text, insert <strong>images</strong>, tables, and LaTeX formulas.</p>
+      <p>Images and LaTeX formulas are <strong>freely positionable</strong> — drag them anywhere on the page, even over text. Resize with the handles around the selection, and use the mini toolbar to bring forward, send back, edit, or delete.</p>
+    </div>
+  </div>
+</div>
+
+<div class="status-bar">
+  <span id="wordCount">0 words</span>
+  <span id="charCount">0 chars</span>
+  <span id="saveStatus" style="margin-left:auto">Unsaved — Ctrl+S to save</span>
+</div>
+
+<!-- LaTeX Modal -->
+<div class="modal-overlay" id="modalLatex">
+  <div class="modal">
+    <h3>LaTeX Formula</h3>
+    <label>Expression</label>
+    <textarea id="latexInput" placeholder="\frac{-b \pm \sqrt{b^2-4ac}}{2a}"></textarea>
+    <div class="latex-preview" id="latexPreview"></div>
+    <label>Display style</label>
+    <select id="latexMode"><option value="block">Display (large, centered)</option><option value="inline">Inline (compact)</option></select>
+    <p style="font-size:11px;color:var(--ink-faint);margin-top:-4px;margin-bottom:10px">The formula will appear as a floating element you can drag anywhere on the page.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnLtxCancel">Cancel</button>
+      <button class="btn btn-accent" id="btnLtxOK">Insert Formula</button>
+    </div>
+  </div>
+</div>
+
+<!-- Image Modal -->
+<div class="modal-overlay" id="modalImage">
+  <div class="modal">
+    <h3>Insert Image</h3>
+    <label>Upload from device</label>
+    <input type="file" id="imgFile" accept="image/*">
+    <label>Or image URL</label>
+    <input type="text" id="imgUrl" placeholder="https://example.com/image.jpg">
+    <label>Alt text (optional)</label>
+    <input type="text" id="imgAlt" placeholder="Description">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnImgCancel">Cancel</button>
+      <button class="btn btn-accent" id="btnImgOK">Insert</button>
+    </div>
+  </div>
+</div>
+
+<!-- Table Modal -->
+<div class="modal-overlay" id="modalTable">
+  <div class="modal">
+    <h3>Insert Table</h3>
+    <div class="tbl-grid">
+      <div><label>Rows</label><input type="number" id="tblRows" value="3" min="1" max="20"></div>
+      <div><label>Columns</label><input type="number" id="tblCols" value="3" min="1" max="10"></div>
+    </div>
+    <label><input type="checkbox" id="tblHeader" checked style="width:auto;margin-right:5px">Header row</label>
+    <div class="modal-actions" style="margin-top:14px">
+      <button class="btn btn-ghost" id="btnTblCancel">Cancel</button>
+      <button class="btn btn-accent" id="btnTblOK">Insert</button>
+    </div>
+  </div>
+</div>
+
+<!-- Progress -->
+<div class="prog-overlay" id="progOverlay">
+  <div class="prog-box"><div class="spinner"></div><p id="progMsg">Working…</p></div>
+</div>
+
+<script>
+'use strict';
+
+const editor = document.getElementById('editor');
+const page   = document.getElementById('page');
+
+/* ═══════════════════════════════════════════════════
+   THE FIX: block ALL mousedown on toolbar from reaching
+   the browser's focus system. This keeps editor selection
+   alive when any toolbar button/swatch is clicked.
+   ═══════════════════════════════════════════════════ */
+document.getElementById('toolbar').addEventListener('mousedown', function(e) {
+  // Selects and color inputs need normal browser interaction
+  if (e.target.tagName === 'SELECT') return;
+  if (e.target.tagName === 'INPUT' && e.target.type === 'color') return;
+  e.preventDefault(); // <-- THE KEY: prevents focus loss
+});
+
+/* ── execCommand wrapper ── */
+function cmd(c, v) {
+  editor.focus();
+  document.execCommand(c, false, v === undefined ? null : v);
+}
+
+/* ── Wire up simple buttons ── */
+function wire(id, fn) {
+  document.getElementById(id).addEventListener('mousedown', e => { e.preventDefault(); fn(); });
+}
+wire('btnBold',      () => cmd('bold'));
+wire('btnItalic',    () => cmd('italic'));
+wire('btnUnderline', () => cmd('underline'));
+wire('btnStrike',    () => cmd('strikeThrough'));
+wire('btnSuper',     () => cmd('superscript'));
+wire('btnSub',       () => cmd('subscript'));
+wire('btnAlL',       () => cmd('justifyLeft'));
+wire('btnAlC',       () => cmd('justifyCenter'));
+wire('btnAlR',       () => cmd('justifyRight'));
+wire('btnUL',        () => cmd('insertUnorderedList'));
+wire('btnOL',        () => cmd('insertOrderedList'));
+wire('btnIn',        () => cmd('indent'));
+wire('btnOut',       () => cmd('outdent'));
+wire('btnClr',       () => cmd('removeFormat'));
+wire('btnUndo',      () => cmd('undo'));
+wire('btnRedo',      () => cmd('redo'));
+wire('btnHR',        () => cmd('insertHorizontalRule'));
+wire('btnImg',       () => openModal('modalImage'));
+wire('btnTbl',       () => openModal('modalTable'));
+wire('btnLtx',       () => openLatexModal(null));
+wire('btnLnk',       () => {
+  const url = prompt('URL:', 'https://');
+  if (url) { cmd('createLink', url); document.querySelectorAll('#editor a').forEach(a => { a.target='_blank'; a.rel='noopener'; }); }
+});
+
+/* ── Selects ── */
+document.getElementById('selBlock').addEventListener('change', function() {
+  editor.focus(); document.execCommand('formatBlock', false, this.value);
+});
+document.getElementById('selFont').addEventListener('change', function() {
+  editor.focus(); document.execCommand('fontName', false, this.value);
+});
+document.getElementById('selSize').addEventListener('change', function() {
+  editor.focus();
+  const size = this.value;
+  const sel = window.getSelection();
+  if (!sel || sel.isCollapsed) return;
+  const range = sel.getRangeAt(0);
+  const span = document.createElement('span');
+  span.style.fontSize = size + 'pt';
+  try {
+    range.surroundContents(span);
+  } catch(_) {
+    document.execCommand('fontSize', false, '7');
+    document.querySelectorAll('#editor font[size="7"]').forEach(f => {
+      f.removeAttribute('size'); f.style.fontSize = size + 'pt';
+    });
+  }
+});
+
+/* ── Toolbar state sync ── */
+function syncToolbar() {
+  document.getElementById('btnBold').classList.toggle('on',      document.queryCommandState('bold'));
+  document.getElementById('btnItalic').classList.toggle('on',    document.queryCommandState('italic'));
+  document.getElementById('btnUnderline').classList.toggle('on', document.queryCommandState('underline'));
+  const tag = (document.queryCommandValue('formatBlock') || '').toLowerCase();
+  const map = {h1:'h1',h2:'h2',h3:'h3',h4:'h4',blockquote:'blockquote',pre:'pre'};
+  document.getElementById('selBlock').value = map[tag] || 'p';
+}
+editor.addEventListener('keyup',   syncToolbar);
+editor.addEventListener('mouseup', syncToolbar);
+
+/* ═══════════════════════════════════════════════════
+   COLOR SYSTEM
+   All color interactions use mousedown + preventDefault
+   so editor selection is 100% preserved.
+   ═══════════════════════════════════════════════════ */
+const TEXT_COLORS = [
+  // Grays
+  '#1E2128','#374151','#6C7280','#9CA3AF','#D1D5DB','#E5E7EB','#F9FAFB','#FFFFFF',
+  // Blues / Indigo / Purple
+  '#1E3A8A','#1D4ED8','#4F6AF5','#60A5FA','#7C3AED','#A78BFA','#EC4899','#F43F5E',
+  // Greens / Teals / Warm
+  '#065F46','#059669','#34D399','#0E7490','#0891B2','#EA580C','#D97706','#CA8A04',
+];
+const HL_COLORS = [
+  'transparent',
+  // Soft tints of the palette
+  '#EEF1FE','#DBEAFE','#EDE9FE','#FCE7F3','#FEE2E2','#FEF3C7','#D1FAE5','#CCFBF1',
+  // Slightly stronger
+  '#C7D2FE','#BFDBFE','#DDD6FE','#FBCFE8','#FCA5A5','#FDE68A','#6EE7B7','#99F6E4',
+];
+
+function buildGrid(gridId, colors, onPick) {
+  const grid = document.getElementById(gridId);
+  colors.forEach(color => {
+    const sw = document.createElement('div');
+    sw.className = 'clr-sw';
+    sw.style.background = color === 'transparent'
+      ? 'linear-gradient(135deg,#fff 45%,#f00 45%,#f00 55%,#fff 55%)'
+      : color;
+    if (color === '#FFFFFF') sw.style.border = '1px solid #aaa';
+    sw.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); onPick(color); });
+    grid.appendChild(sw);
+  });
+}
+
+function applyTextColor(color) {
+  // Restore focus+selection, then apply
+  editor.focus();
+  document.execCommand('foreColor', false, color);
+  document.getElementById('barTC').style.background    = color;
+  document.getElementById('letterTC').style.color  = color;
+  closeAllPops();
+}
+
+function applyHlColor(color) {
+  editor.focus();
+  if (color === 'transparent') {
+    // Use a workaround: apply white, then remove
+    document.execCommand('hiliteColor', false, 'rgba(0,0,0,0)');
+  } else {
+    // hiliteColor works in Firefox; backColor works in Chrome
+    if (!document.execCommand('hiliteColor', false, color)) {
+      document.execCommand('backColor', false, color);
+    }
+  }
+  document.getElementById('barHL').style.background = color === 'transparent'
+    ? 'linear-gradient(135deg,#fff 45%,#f00 45%,#f00 55%,#fff 55%)'
+    : color;
+  closeAllPops();
+}
+
+buildGrid('gridTC', TEXT_COLORS, applyTextColor);
+buildGrid('gridHL', HL_COLORS,   applyHlColor);
+
+// Custom inputs — selecting them steals focus, so we restore after
+document.getElementById('customTC').addEventListener('input', function() {
+  applyTextColor(this.value);
+});
+document.getElementById('customHL').addEventListener('input', function() {
+  applyHlColor(this.value);
+});
+
+// Toggle popovers — mousedown prevents focus loss
+function togglePop(popId, e) {
+  e.preventDefault(); e.stopPropagation();
+  const pop = document.getElementById(popId);
+  const wasOpen = pop.classList.contains('open');
+  closeAllPops();
+  if (!wasOpen) pop.classList.add('open');
+}
+function closeAllPops() {
+  document.querySelectorAll('.clr-pop.open').forEach(p => p.classList.remove('open'));
+}
+
+document.getElementById('faceTC').addEventListener('mousedown', e => togglePop('popTC', e));
+document.getElementById('faceHL').addEventListener('mousedown', e => togglePop('popHL', e));
+document.addEventListener('mousedown', e => {
+  if (!e.target.closest('.clr-btn')) closeAllPops();
+});
+
+/* ═══════════════════════════════════════════════════
+   FREE-FLOATING IMAGES
+   position:absolute inside .page
+   Completely independent of text flow — drag anywhere,
+   including over text. z-index controllable via mini bar.
+   ═══════════════════════════════════════════════════ */
+let activeImg = null;
+
+function createFreeImg(src, alt) {
+  const wrap = document.createElement('div');
+  wrap.className = 'free-img';
+  wrap.dataset.src = src;
+  wrap.style.zIndex = '10';
+
+  const img = document.createElement('img');
+  img.src = src; img.alt = alt || '';
+
+  const badge = document.createElement('div');
+  badge.className = 'size-badge';
+
+  // Mini toolbar
+  const bar = document.createElement('div');
+  bar.className = 'float-bar';
+  bar.innerHTML = `
+    <button class="fb-btn" data-action="front">↑ Forward</button>
+    <div class="fb-sep"></div>
+    <button class="fb-btn" data-action="back">↓ Back</button>
+    <div class="fb-sep"></div>
+    <button class="fb-btn" data-action="del" style="color:#F87171">✕ Delete</button>
+  `;
+
+  // Resize handles
+  ['nw','n','ne','w','e','sw','s','se'].forEach(dir => {
+    const h = document.createElement('div');
+    h.className = `rh ${dir}`; h.dataset.dir = dir;
+    wrap.appendChild(h);
+  });
+
+  wrap.appendChild(img);
+  wrap.appendChild(badge);
+  wrap.appendChild(bar);
+
+  // Initial position
+  wrap.style.left = '80px';
+  wrap.style.top  = '72px';
+  page.appendChild(wrap);
+
+  img.onload = () => {
+    const maxW = Math.min(img.naturalWidth, page.clientWidth - 160);
+    img.style.width = maxW + 'px';
+    // Center horizontally
+    const cx = Math.round((page.clientWidth - maxW) / 2);
+    wrap.style.left = cx + 'px';
+  };
+
+  // Select + drag on mousedown (excluding handles and toolbar)
+  wrap.addEventListener('mousedown', e => {
+    if (e.target.classList.contains('rh') || e.target.closest('.img-mini-bar')) return;
+    e.preventDefault();
+    selectImg(wrap);
+    startDrag(e, wrap);
+  });
+
+  // Resize handles
+  wrap.querySelectorAll('.rh').forEach(h => {
+    h.addEventListener('mousedown', e => {
+      e.preventDefault(); e.stopPropagation();
+      selectImg(wrap);
+      startResize(e, wrap, h.dataset.dir);
+    });
+  });
+
+  // Mini bar actions
+  bar.addEventListener('mousedown', e => {
+    e.preventDefault(); e.stopPropagation();
+    const action = e.target.closest('[data-action]')?.dataset.action;
+    if (!action) return;
+    const z = parseInt(wrap.style.zIndex) || 10;
+    if (action === 'front') wrap.style.zIndex = String(z + 1);
+    if (action === 'back')  wrap.style.zIndex = String(Math.max(1, z - 1));
+    if (action === 'del')   { wrap.remove(); activeImg = null; }
+  });
+
+  selectImg(wrap);
+  return wrap;
+}
+
+function selectImg(wrap) {
+  document.querySelectorAll('.free-img.selected').forEach(w => w.classList.remove('selected'));
+  wrap.classList.add('selected');
+  activeImg = wrap;
+}
+
+function deselectAll() {
+  document.querySelectorAll('.free-img.selected').forEach(w => w.classList.remove('selected'));
+  activeImg = null;
+}
+
+// Clicking on editor text (not image) deselects
+editor.addEventListener('mousedown', () => { deselectAll(); deselectAllLtx(); });
+
+// Delete key removes selected image or latex (when editor is NOT focused on text cursor)
+document.addEventListener('keydown', e => {
+  if (document.activeElement !== editor) {
+    if (activeImg && (e.key === 'Delete' || e.key === 'Backspace')) {
+      e.preventDefault(); activeImg.remove(); activeImg = null;
+    }
+    if (activeLtx && (e.key === 'Delete' || e.key === 'Backspace')) {
+      e.preventDefault(); activeLtx.remove(); activeLtx = null;
+    }
+  }
+});
+
+function startDrag(e, wrap) {
+  // Offset of mouse from top-left of wrapper
+  const ox = e.clientX - wrap.offsetLeft;
+  const oy = e.clientY - wrap.offsetTop;
+
+  function onMove(ev) {
+    const x = ev.clientX - ox;
+    const y = ev.clientY - oy;
+    // Allow any position — even negative (partially off-page) — user freedom
+    wrap.style.left = x + 'px';
+    wrap.style.top  = y + 'px';
+  }
+  function onUp() {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup',   onUp);
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup',   onUp);
+}
+
+function startResize(e, wrap, dir) {
+  const img    = wrap.querySelector('img');
+  const badge  = wrap.querySelector('.size-badge');
+  const sx = e.clientX, sy = e.clientY;
+  const sw = img.offsetWidth, sh = img.offsetHeight;
+  const sl = wrap.offsetLeft,  st = wrap.offsetTop;
+  const aspect = sw / sh;
+  wrap.classList.add('resizing');
+
+  function onMove(ev) {
+    const dx = ev.clientX - sx, dy = ev.clientY - sy;
+    let nw = sw, nh = sh, nl = sl, nt = st;
+    const isCorner = dir.length === 2;
+
+    if (dir.includes('e')) nw = Math.max(40, sw + dx);
+    if (dir.includes('s')) nh = Math.max(30, sh + dy);
+    if (dir.includes('w')) { nw = Math.max(40, sw - dx); nl = sl + (sw - nw); }
+    if (dir.includes('n')) { nh = Math.max(30, sh - dy); nt = st + (sh - nh); }
+
+    if (isCorner) {
+      // Lock aspect ratio on corner drags
+      if (Math.abs(dx) >= Math.abs(dy)) { nh = nw / aspect; }
+      else { nw = nh * aspect; }
+      if (dir.includes('n')) nt = st + (sh - nh);
+      if (dir.includes('w')) nl = sl + (sw - nw);
+    }
+
+    img.style.width  = Math.round(nw) + 'px';
+    img.style.height = isCorner ? 'auto' : Math.round(nh) + 'px';
+    wrap.style.left  = Math.round(nl) + 'px';
+    wrap.style.top   = Math.round(nt) + 'px';
+    if (badge) badge.textContent = Math.round(img.offsetWidth) + ' × ' + Math.round(img.offsetHeight);
+  }
+  function onUp() {
+    wrap.classList.remove('resizing');
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup',   onUp);
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup',   onUp);
+}
+
+/* ═══════════════════════════════════════════════════
+   IMAGE MODAL
+   ═══════════════════════════════════════════════════ */
+let pendingImgSrc = null;
+
+document.getElementById('imgFile').addEventListener('change', function() {
+  const file = this.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => { pendingImgSrc = ev.target.result; };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('btnImgOK').addEventListener('mousedown', e => {
+  e.preventDefault();
+  const src = pendingImgSrc || document.getElementById('imgUrl').value.trim();
+  const alt = document.getElementById('imgAlt').value.trim();
+  if (!src) { alert('Please provide an image.'); return; }
+  createFreeImg(src, alt);
+  pendingImgSrc = null;
+  document.getElementById('imgFile').value = '';
+  document.getElementById('imgUrl').value  = '';
+  document.getElementById('imgAlt').value  = '';
+  closeModal('modalImage');
+});
+document.getElementById('btnImgCancel').addEventListener('mousedown', e => { e.preventDefault(); closeModal('modalImage'); });
+
+/* ═══════════════════════════════════════════════════
+   TABLE MODAL
+   ═══════════════════════════════════════════════════ */
+document.getElementById('btnTblOK').addEventListener('mousedown', e => {
+  e.preventDefault();
+  const rows = parseInt(document.getElementById('tblRows').value) || 3;
+  const cols = parseInt(document.getElementById('tblCols').value) || 3;
+  const hasH = document.getElementById('tblHeader').checked;
+  editor.focus();
+  const table = document.createElement('table');
+  for (let r = 0; r < rows; r++) {
+    const tr = document.createElement('tr');
+    for (let c = 0; c < cols; c++) {
+      const cell = document.createElement(r === 0 && hasH ? 'th' : 'td');
+      cell.innerHTML = '&nbsp;'; tr.appendChild(cell);
+    }
+    table.appendChild(tr);
+  }
+  insertAtCursor(table);
+  closeModal('modalTable');
+});
+document.getElementById('btnTblCancel').addEventListener('mousedown', e => { e.preventDefault(); closeModal('modalTable'); });
+
+/* ═══════════════════════════════════════════════════
+   LATEX FREE-FLOAT SYSTEM
+   LaTeX formulas are freely draggable/resizable just like images.
+   ═══════════════════════════════════════════════════ */
+let activeLtx = null;
+
+function createFreeLtx(latex, displayMode) {
+  let rendered;
+  try { rendered = katex.renderToString(latex, { displayMode, throwOnError: false }); }
+  catch(_) { rendered = '<span style="color:red">Invalid LaTeX</span>'; }
+
+  const wrap = document.createElement('div');
+  wrap.className = 'free-ltx';
+  wrap.dataset.latex  = latex;
+  wrap.dataset.display = displayMode ? '1' : '0';
+  wrap.style.zIndex = '10';
+
+  const inner = document.createElement('div');
+  inner.className = 'free-ltx-inner';
+  inner.innerHTML = rendered;
+
+  const badge = document.createElement('div');
+  badge.className = 'size-badge';
+
+  const bar = document.createElement('div');
+  bar.className = 'float-bar';
+  bar.innerHTML = `
+    <button class="fb-btn" data-action="edit">✎ Edit</button>
+    <div class="fb-sep"></div>
+    <button class="fb-btn" data-action="front">↑ Forward</button>
+    <div class="fb-sep"></div>
+    <button class="fb-btn" data-action="back">↓ Back</button>
+    <div class="fb-sep"></div>
+    <button class="fb-btn" data-action="del" style="color:#F87171">✕ Delete</button>
+  `;
+
+  // Resize handles
+  ['nw','n','ne','w','e','sw','s','se'].forEach(dir => {
+    const h = document.createElement('div');
+    h.className = `rh ${dir}`; h.dataset.dir = dir;
+    wrap.appendChild(h);
+  });
+
+  wrap.appendChild(inner);
+  wrap.appendChild(badge);
+  wrap.appendChild(bar);
+
+  // Default center position
+  wrap.style.left = '80px';
+  wrap.style.top  = '120px';
+  page.appendChild(wrap);
+
+  // Center horizontally after render
+  requestAnimationFrame(() => {
+    const cx = Math.round((page.clientWidth - wrap.offsetWidth) / 2);
+    wrap.style.left = Math.max(0, cx) + 'px';
+  });
+
+  // Select + drag
+  wrap.addEventListener('mousedown', e => {
+    if (e.target.classList.contains('rh') || e.target.closest('.float-bar')) return;
+    e.preventDefault();
+    selectLtx(wrap);
+    startLtxDrag(e, wrap);
+  });
+
+  // Resize
+  wrap.querySelectorAll('.rh').forEach(h => {
+    h.addEventListener('mousedown', e => {
+      e.preventDefault(); e.stopPropagation();
+      selectLtx(wrap);
+      startLtxResize(e, wrap, h.dataset.dir);
+    });
+  });
+
+  // Mini bar
+  bar.addEventListener('mousedown', e => {
+    e.preventDefault(); e.stopPropagation();
+    const action = e.target.closest('[data-action]')?.dataset.action;
+    if (!action) return;
+    const z = parseInt(wrap.style.zIndex) || 10;
+    if (action === 'front') wrap.style.zIndex = String(z + 1);
+    if (action === 'back')  wrap.style.zIndex = String(Math.max(1, z - 1));
+    if (action === 'del')   { wrap.remove(); activeLtx = null; }
+    if (action === 'edit')  { openLatexModal(wrap); }
+  });
+
+  selectLtx(wrap);
+  return wrap;
+}
+
+function selectLtx(wrap) {
+  document.querySelectorAll('.free-ltx.selected').forEach(w => w.classList.remove('selected'));
+  wrap.classList.add('selected');
+  activeLtx = wrap;
+}
+
+function deselectAllLtx() {
+  document.querySelectorAll('.free-ltx.selected').forEach(w => w.classList.remove('selected'));
+  activeLtx = null;
+}
+
+function startLtxDrag(e, wrap) {
+  const ox = e.clientX - wrap.offsetLeft;
+  const oy = e.clientY - wrap.offsetTop;
+  function onMove(ev) { wrap.style.left = (ev.clientX - ox) + 'px'; wrap.style.top = (ev.clientY - oy) + 'px'; }
+  function onUp()  { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup',   onUp);
+}
+
+function startLtxResize(e, wrap, dir) {
+  const badge = wrap.querySelector('.size-badge');
+  const sx = e.clientX, sy = e.clientY;
+  const sw = wrap.offsetWidth, sh = wrap.offsetHeight;
+  const sl = wrap.offsetLeft,  st = wrap.offsetTop;
+  wrap.classList.add('resizing');
+  function onMove(ev) {
+    const dx = ev.clientX - sx, dy = ev.clientY - sy;
+    let nw = sw, nl = sl, nt = st;
+    if (dir.includes('e')) nw = Math.max(60, sw + dx);
+    if (dir.includes('w')) { nw = Math.max(60, sw - dx); nl = sl + (sw - nw); }
+    // For latex we only resize width (height is auto)
+    wrap.style.width = Math.round(nw) + 'px';
+    wrap.style.left  = Math.round(nl) + 'px';
+    if (badge) badge.textContent = Math.round(nw) + 'px wide';
+  }
+  function onUp() {
+    wrap.classList.remove('resizing');
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup',   onUp);
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup',   onUp);
+}
+
+// Also deselect latex on editor click
+editor.addEventListener('mousedown', deselectAllLtx);
+
+/* ═══════════════════════════════════════════════════
+   LATEX MODAL
+   ═══════════════════════════════════════════════════ */
+let editingLatexEl = null;
+
+function openLatexModal(el) {
+  editingLatexEl = el || null;
+  document.getElementById('latexInput').value = el ? (el.dataset.latex || '') : '';
+  if (el) document.getElementById('latexMode').value = (el.dataset.display === '1') ? 'block' : 'inline';
+  previewLatex();
+  openModal('modalLatex');
+  setTimeout(() => document.getElementById('latexInput').focus(), 80);
+}
+
+document.getElementById('latexInput').addEventListener('input', previewLatex);
+function previewLatex() {
+  const v = document.getElementById('latexInput').value.trim();
+  const p = document.getElementById('latexPreview');
+  if (!v) { p.innerHTML = ''; return; }
+  try { p.innerHTML = katex.renderToString(v, { displayMode: true, throwOnError: false }); }
+  catch(_) { p.innerHTML = '<span style="color:red;font-size:12px">Invalid LaTeX</span>'; }
+}
+
+document.getElementById('btnLtxOK').addEventListener('mousedown', e => {
+  e.preventDefault();
+  const latex = document.getElementById('latexInput').value.trim();
+  if (!latex) return;
+  const isBlock = document.getElementById('latexMode').value === 'block';
+  let rendered;
+  try { rendered = katex.renderToString(latex, { displayMode: isBlock, throwOnError: false }); }
+  catch(_) { rendered = latex; }
+
+  if (editingLatexEl) {
+    // Update existing free-float latex
+    editingLatexEl.dataset.latex   = latex;
+    editingLatexEl.dataset.display = isBlock ? '1' : '0';
+    editingLatexEl.querySelector('.free-ltx-inner').innerHTML = rendered;
+  } else {
+    // Create new free-float latex
+    createFreeLtx(latex, isBlock);
+  }
+  editingLatexEl = null;
+  closeModal('modalLatex');
+});
+document.getElementById('btnLtxCancel').addEventListener('mousedown', e => { e.preventDefault(); closeModal('modalLatex'); });
+
+/* ═══════════════════════════════════════════════════
+   MODAL HELPERS
+   ═══════════════════════════════════════════════════ */
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('mousedown', e => { if (e.target === m) closeModal(m.id); });
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(m => closeModal(m.id));
+});
+
+/* ═══════════════════════════════════════════════════
+   CURSOR INSERTION
+   ═══════════════════════════════════════════════════ */
+function insertAtCursor(node) {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) { editor.appendChild(node); return; }
+  const range = sel.getRangeAt(0);
+  if (!editor.contains(range.commonAncestorContainer)) { editor.appendChild(node); return; }
+  range.deleteContents();
+  range.insertNode(node);
+  range.setStartAfter(node);
+  range.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+/* ═══════════════════════════════════════════════════
+   WORD COUNT
+   ═══════════════════════════════════════════════════ */
+function updateCounts() {
+  const txt = editor.innerText || '';
+  const words = txt.trim() ? txt.trim().split(/\s+/).length : 0;
+  document.getElementById('wordCount').textContent = words + ' word' + (words !== 1 ? 's' : '');
+  document.getElementById('charCount').textContent = txt.replace(/\n/g,'').length + ' chars';
+}
+editor.addEventListener('input', updateCounts);
+updateCounts();
+
+/* ═══════════════════════════════════════════════════
+   SAVE / RESTORE
+   ═══════════════════════════════════════════════════ */
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault();
+    const imgs = [...document.querySelectorAll('.free-img')].map(w => ({
+      src:   w.dataset.src || w.querySelector('img')?.src || '',
+      alt:   w.querySelector('img')?.alt || '',
+      left:  w.style.left, top: w.style.top, z: w.style.zIndex || '10',
+      width: w.querySelector('img')?.style.width || '',
+    }));
+    const ltxs = [...document.querySelectorAll('.free-ltx')].map(w => ({
+      latex:   w.dataset.latex || '',
+      display: w.dataset.display || '1',
+      left:    w.style.left, top: w.style.top, z: w.style.zIndex || '10',
+      width:   w.style.width || '',
+    }));
+    localStorage.setItem('docs-editor', editor.innerHTML);
+    localStorage.setItem('docs-title',  document.getElementById('docTitle').value);
+    localStorage.setItem('docs-imgs',   JSON.stringify(imgs));
+    localStorage.setItem('docs-ltxs',   JSON.stringify(ltxs));
+    document.getElementById('saveStatus').textContent = 'Saved at ' + new Date().toLocaleTimeString();
+  }
+});
+
+window.addEventListener('load', () => {
+  const content = localStorage.getItem('docs-editor');
+  const title   = localStorage.getItem('docs-title');
+  const imgs    = localStorage.getItem('docs-imgs');
+  const ltxs    = localStorage.getItem('docs-ltxs');
+  if (content) editor.innerHTML = content;
+  if (title) document.getElementById('docTitle').value = title;
+  if (imgs) {
+    try {
+      JSON.parse(imgs).forEach(d => {
+        const w = createFreeImg(d.src, d.alt);
+        w.style.left = d.left; w.style.top = d.top; w.style.zIndex = d.z || '10';
+        if (d.width) w.querySelector('img').style.width = d.width;
+      });
+      deselectAll();
+    } catch(_) {}
+  }
+  if (ltxs) {
+    try {
+      JSON.parse(ltxs).forEach(d => {
+        const w = createFreeLtx(d.latex, d.display === '1');
+        w.style.left = d.left; w.style.top = d.top; w.style.zIndex = d.z || '10';
+        if (d.width) w.style.width = d.width;
+      });
+      deselectAllLtx();
+    } catch(_) {}
+  }
+  updateCounts();
+});
+
+/* ═══════════════════════════════════════════════════
+   PASTE — allow image paste
+   ═══════════════════════════════════════════════════ */
+editor.addEventListener('paste', e => {
+  const items = e.clipboardData?.items;
+  if (items) {
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const reader = new FileReader();
+        reader.onload = ev => createFreeImg(ev.target.result, 'Pasted image');
+        reader.readAsDataURL(item.getAsFile());
+        return;
+      }
+    }
+  }
+  e.preventDefault();
+  const text = e.clipboardData?.getData('text/plain') || '';
+  if (text) document.execCommand('insertText', false, text);
+});
+
+/* ═══════════════════════════════════════════════════
+   PROGRESS
+   ═══════════════════════════════════════════════════ */
+function showProg(msg) { document.getElementById('progMsg').textContent = msg; document.getElementById('progOverlay').classList.add('open'); }
+function hideProg()    { document.getElementById('progOverlay').classList.remove('open'); }
+
+/* ═══════════════════════════════════════════════════
+   EXPORT PDF
+   ═══════════════════════════════════════════════════ */
+document.getElementById('btnExportPDF').addEventListener('click', async () => {
+  showProg('Rendering PDF…');
+  await new Promise(r => setTimeout(r, 80));
+  try {
+    deselectAll(); closeAllPops();
+    const { jsPDF } = window.jspdf;
+    const canvas = await html2canvas(page, { scale:2, useCORS:true, allowTaint:true, backgroundColor:'#FEFCF8', logging:false });
+    const pdf = new jsPDF({ orientation:'portrait', unit:'pt', format:'a4' });
+    const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
+    const imgData = canvas.toDataURL('image/png');
+    const totalH = pw * canvas.height / canvas.width;
+    let y = 0;
+    while (y < totalH) {
+      if (y > 0) pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, -y, pw, totalH);
+      y += ph;
+    }
+    pdf.save((document.getElementById('docTitle').value || 'document') + '.pdf');
+  } catch(e) { console.error(e); alert('PDF error: ' + e.message); }
+  hideProg();
+});
+
+/* ═══════════════════════════════════════════════════
+   EXPORT DOCX
+   ═══════════════════════════════════════════════════ */
+document.getElementById('btnExportDocx').addEventListener('click', async () => {
+  showProg('Building DOCX…');
+  await new Promise(r => setTimeout(r, 80));
+  try {
+    const { Document, Packer, Paragraph, TextRun, HeadingLevel,
+            Table, TableRow, TableCell, ImageRun,
+            AlignmentType, BorderStyle, WidthType, UnderlineType } = docx;
+
+    function colorToHex(css) {
+      if (!css || css === 'transparent') return undefined;
+      const c = document.createElement('canvas').getContext('2d');
+      c.fillStyle = css; const v = c.fillStyle;
+      if (v.startsWith('#')) return v.slice(1).toUpperCase();
+      const m = v.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+      return m ? ((+m[1]<<16)|(+m[2]<<8)|+m[3]).toString(16).padStart(6,'0').toUpperCase() : undefined;
+    }
+
+    function styleText(el) {
+      const runs = [];
+      (function walk(node) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          if (!node.textContent) return;
+          let bold=false,italic=false,underline=false,strike=false,color;
+          let p = node.parentElement;
+          while (p && p !== editor) {
+            const t = p.tagName?.toLowerCase();
+            if (t==='b'||t==='strong') bold=true;
+            if (t==='i'||t==='em') italic=true;
+            if (t==='u') underline=true;
+            if (t==='s'||t==='del') strike=true;
+            if (p.style.color && !color) color=p.style.color;
+            p=p.parentElement;
+          }
+          const run = {text:node.textContent,bold,italics:italic,strike};
+          if (underline) run.underline={type:UnderlineType.SINGLE};
+          const hex = colorToHex(color); if (hex) run.color=hex;
+          runs.push(new TextRun(run));
+        } else if (node.nodeType===Node.ELEMENT_NODE) {
+          if (node.tagName.toLowerCase()==='br') { runs.push(new TextRun({text:'',break:1})); return; }
+          Array.from(node.childNodes).forEach(walk);
+        }
+      })(el);
+      return runs;
+    }
+
+    async function imgToB64(src) {
+      return new Promise((res,rej) => {
+        const i=new Image(); i.crossOrigin='Anonymous';
+        i.onload=()=>{ const c=document.createElement('canvas'); c.width=i.naturalWidth; c.height=i.naturalHeight; c.getContext('2d').drawImage(i,0,0); res({data:c.toDataURL('image/png').split(',')[1],w:i.naturalWidth,h:i.naturalHeight}); };
+        i.onerror=rej; i.src=src;
+      });
+    }
+
+    async function processNode(el) {
+      const t=el.tagName?.toLowerCase();
+      if (t==='h1') return new Paragraph({heading:HeadingLevel.HEADING_1,children:styleText(el)});
+      if (t==='h2') return new Paragraph({heading:HeadingLevel.HEADING_2,children:styleText(el)});
+      if (t==='h3') return new Paragraph({heading:HeadingLevel.HEADING_3,children:styleText(el)});
+      if (t==='h4') return new Paragraph({heading:HeadingLevel.HEADING_4,children:styleText(el)});
+      if (t==='blockquote') return new Paragraph({children:styleText(el),indent:{left:720},border:{left:{color:'C8472A',size:6,space:4,style:BorderStyle.SINGLE}}});
+      if (t==='hr') return new Paragraph({border:{bottom:{color:'E2DDD8',size:6,space:1,style:BorderStyle.SINGLE}},children:[]});
+      if (t==='ul'||t==='ol') {
+        const items=[];
+        for (const li of el.querySelectorAll(':scope > li')) items.push(new Paragraph({children:styleText(li),bullet:t==='ul'?{level:0}:undefined}));
+        return items;
+      }
+      if (t==='table') {
+        const rows=[];
+        for (const tr of el.querySelectorAll('tr')) {
+          const cells=[];
+          for (const td of tr.querySelectorAll('td,th')) cells.push(new TableCell({children:[new Paragraph({children:styleText(td)})],margins:{top:80,bottom:80,left:120,right:120}}));
+          rows.push(new TableRow({children:cells}));
+        }
+        return new Table({rows,width:{size:100,type:WidthType.PERCENTAGE}});
+      }
+      if (t==='div'&&el.classList.contains('free-ltx')) return null; // handled separately
+      const runs=styleText(el);
+      return runs.length ? new Paragraph({children:runs}) : null;
+    }
+
+    async function processChildren(parent) {
+      const result=[];
+      for (const child of parent.childNodes) {
+        if (child.nodeType===Node.TEXT_NODE) {
+          const text=child.textContent.trim(); if (text) result.push(new Paragraph({children:[new TextRun({text})]}));
+          continue;
+        }
+        if (child.nodeType!==Node.ELEMENT_NODE) continue;
+        const t=child.tagName.toLowerCase();
+        if ((t==='div'||t==='p')&&!child.classList.contains('latex-block')) {
+          const inner=await processChildren(child);
+          result.push(...(inner.length?inner:[new Paragraph({children:[]})]));
+          continue;
+        }
+        const processed=await processNode(child);
+        if (!processed) continue;
+        if (Array.isArray(processed)) result.push(...processed); else result.push(processed);
+      }
+      return result;
+    }
+
+    const paragraphs = await processChildren(editor);
+
+    // Append free-floating images at end
+    for (const wrap of document.querySelectorAll('.free-img')) {
+      const img=wrap.querySelector('img'); if (!img) continue;
+      try {
+        const {data,w,h}=await imgToB64(img.src);
+        const dw=img.offsetWidth||w, dh=img.offsetHeight||h;
+        const scale=Math.min(1,500/dw);
+        paragraphs.push(new Paragraph({children:[new ImageRun({data:Uint8Array.from(atob(data),c=>c.charCodeAt(0)),transformation:{width:Math.round(dw*scale),height:Math.round(dh*scale)},type:'png'})],alignment:AlignmentType.CENTER}));
+      } catch(_) {}
+    }
+
+    // Append free-floating LaTeX formulas as italic placeholders
+    for (const wrap of document.querySelectorAll('.free-ltx')) {
+      const latex = wrap.dataset.latex || '';
+      if (latex) paragraphs.push(new Paragraph({children:[new TextRun({text:'[ LaTeX: '+latex+' ]',italics:true,color:'4F6AF5'})],alignment:AlignmentType.CENTER}));
+    }
+
+    if (!paragraphs.length) paragraphs.push(new Paragraph({children:[]}));
+    const dc=new Document({title:document.getElementById('docTitle').value,sections:[{properties:{page:{margin:{top:1440,bottom:1440,left:1440,right:1440}}},children:paragraphs}]});
+    const blob=await Packer.toBlob(dc);
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=(document.getElementById('docTitle').value||'document')+'.docx'; a.click(); URL.revokeObjectURL(url);
+  } catch(e) { console.error(e); alert('DOCX error: '+e.message); }
+  hideProg();
+});
+</script>
+</body>
+</html>
