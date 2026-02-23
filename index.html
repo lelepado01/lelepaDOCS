@@ -3,13 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LelepaDocs</title>
+<title>Docs — Write Beautifully</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -172,6 +170,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 [data-tip]:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1E2128;color:#fff;font-size:10.5px;padding:4px 8px;border-radius:5px;white-space:nowrap;pointer-events:none;z-index:9999;font-family:'DM Sans',sans-serif;box-shadow:0 3px 10px rgba(30,33,40,.25);}
 
 @media(max-width:600px){.page{padding:40px 22px;}.logo-text{display:none;}}
+
 </style>
 </head>
 <body>
@@ -179,7 +178,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
 <header class="app-header">
   <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
     <div class="logo-icon">D</div>
-    <span class="logo-text">LelepaDocs</span>
+    <span class="logo-text">Docs</span>
   </div>
   <div class="doc-title-wrap">
     <input type="text" id="docTitle" value="Untitled Document" spellcheck="false">
@@ -189,7 +188,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);min-
       <svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>DOCX
     </button>
     <button class="btn btn-accent" id="btnExportPDF">
-      <svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:currentColor"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/></svg>PDF
+      <svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:currentColor"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/></svg>Export PDF
     </button>
   </div>
 </header>
@@ -1072,34 +1071,116 @@ editor.addEventListener('paste', e => {
 function showProg(msg) { document.getElementById('progMsg').textContent = msg; document.getElementById('progOverlay').classList.add('open'); }
 function hideProg()    { document.getElementById('progOverlay').classList.remove('open'); }
 
-/* ═══════════════════════════════════════════════════
-   EXPORT PDF
-   ═══════════════════════════════════════════════════ */
-document.getElementById('btnExportPDF').addEventListener('click', async () => {
-  showProg('Rendering PDF…');
-  await new Promise(r => setTimeout(r, 80));
-  try {
-    deselectAll(); closeAllPops();
-    const { jsPDF } = window.jspdf;
-    const canvas = await html2canvas(page, { scale:2, useCORS:true, allowTaint:true, backgroundColor:'#FEFCF8', logging:false });
-    const pdf = new jsPDF({ orientation:'portrait', unit:'pt', format:'a4' });
-    const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
-    const imgData = canvas.toDataURL('image/png');
-    const totalH = pw * canvas.height / canvas.width;
-    let y = 0;
-    while (y < totalH) {
-      if (y > 0) pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, -y, pw, totalH);
-      y += ph;
+document.getElementById('btnExportPDF').addEventListener('click', () => {
+  deselectAll();
+  deselectAllLtx();
+  closeAllPops();
+
+  // Snapshot floats with pixel-perfect positions
+  const floatSnaps = [];
+  document.querySelectorAll('.free-img, .free-ltx').forEach(function(el) {
+    var isImg = el.classList.contains('free-img');
+    var snap = { type: isImg ? 'img' : 'ltx', left: el.offsetLeft, top: el.offsetTop, z: parseInt(el.style.zIndex) || 10 };
+    if (isImg) {
+      var im = el.querySelector('img');
+      snap.src = im.src; snap.alt = im.alt || ''; snap.w = im.offsetWidth; snap.h = im.offsetHeight;
+    } else {
+      snap.inner = el.querySelector('.free-ltx-inner').innerHTML;
+      snap.width = el.offsetWidth;
     }
-    pdf.save((document.getElementById('docTitle').value || 'document') + '.pdf');
-  } catch(e) { console.error(e); alert('PDF error: ' + e.message); }
-  hideProg();
+    floatSnaps.push(snap);
+  });
+
+  var editorHTML = editor.innerHTML;
+  var pageW      = page.offsetWidth;
+  var pageH      = page.offsetHeight;
+  var docTitle   = document.getElementById('docTitle').value || 'document';
+
+  // Collect stylesheet hrefs
+  var linkHrefs = Array.from(document.head.querySelectorAll('link[rel="stylesheet"]')).map(function(l){ return l.href; });
+
+  // Build floating HTML with hardcoded pixel positions
+  var floatsHTML = floatSnaps.map(function(s) {
+    if (s.type === 'img') {
+      return '<div style="position:absolute;left:' + s.left + 'px;top:' + s.top + 'px;z-index:' + s.z + ';">' +
+             '<img src="' + s.src + '" alt="" style="width:' + s.w + 'px;height:' + s.h + 'px;display:block;border-radius:3px;">' +
+             '</div>';
+    } else {
+      return '<div style="position:absolute;left:' + s.left + 'px;top:' + s.top + 'px;width:' + s.width + 'px;z-index:' + s.z + ';">' +
+             '<div style="background:#F8F9FF;border:1.5px solid #DDE1E9;border-radius:8px;padding:10px 16px;line-height:1.4;">' + s.inner + '</div>' +
+             '</div>';
+    }
+  }).join('');
+
+  var linkTags = linkHrefs.map(function(h){ return '<link rel="stylesheet" href="' + h + '">'; }).join('');
+
+  // Build the complete print document as an array of lines then join
+  var lines = [
+    '<!DOCTYPE html>',
+    '<html lang="en"><head>',
+    '<meta charset="UTF-8">',
+    '<title>' + docTitle + '</title>',
+    linkTags,
+    '<style>',
+    '*,*::before,*::after{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}',
+    ':root{--bg:#F0F2F5;--paper:#FFFFFF;--ink:#1E2128;--ink-muted:#6C7280;--accent:#4F6AF5;--accent-light:#EEF1FE;--border:#DDE1E9;--border-dark:#C4C9D6;}',
+    'html,body{margin:0;padding:0;background:#fff;font-family:"DM Sans",sans-serif;}',
+    '.page{width:' + pageW + 'px;margin:0 auto;padding:72px 80px;background:#fff;position:relative;min-height:' + pageH + 'px;}',
+    '#editor{font-family:"Lora",serif;font-size:11.5pt;line-height:1.8;color:#1E2128;position:relative;z-index:1;}',
+    '#editor h1{font-size:26pt;line-height:1.2;margin:16px 0 8px;font-weight:700;}',
+    '#editor h2{font-size:19pt;line-height:1.3;margin:14px 0 6px;font-weight:600;}',
+    '#editor h3{font-size:14pt;line-height:1.4;margin:12px 0 4px;font-weight:600;}',
+    '#editor h4{font-size:12pt;line-height:1.5;margin:10px 0 4px;font-weight:600;}',
+    '#editor p{margin:0 0 6px;}',
+    '#editor ul,#editor ol{padding-left:24px;margin:6px 0;}',
+    '#editor li{margin:3px 0;}',
+    '#editor blockquote{border-left:3px solid #4F6AF5;padding-left:16px;color:#6C7280;font-style:italic;margin:12px 0;}',
+    '#editor table{border-collapse:collapse;width:100%;margin:12px 0;font-size:10.5pt;}',
+    '#editor td,#editor th{border:1px solid #DDE1E9;padding:8px 12px;vertical-align:top;min-width:60px;}',
+    '#editor th{background:#F0F2F5;font-weight:600;}',
+    '#editor hr{border:none;border-top:1px solid #DDE1E9;margin:20px 0;}',
+    '#editor code{font-family:"Courier New",monospace;background:#F0F2F5;padding:1px 5px;border-radius:3px;font-size:.9em;color:#3A52D4;}',
+    '#editor pre{background:#1E2128;color:#E2E8F0;padding:16px;border-radius:8px;margin:12px 0;font-family:"Courier New",monospace;font-size:9.5pt;line-height:1.6;}',
+    '#editor a{color:#4F6AF5;text-decoration:underline;text-underline-offset:2px;}',
+    '@page{size:A4 portrait;margin:0;}',
+    '@media print{',
+    '  html,body{background:#fff!important;}',
+    '  .page{width:100%!important;padding:15mm 20mm!important;min-height:unset!important;}',
+    '  h1,h2,h3{break-after:avoid;}',
+    '  table,pre,blockquote{break-inside:avoid;}',
+    '}',
+    '</style></head><body>',
+    '<div class="page">',
+    '<div id="editor">' + editorHTML + '</div>',
+    floatsHTML,
+    '</div>',
+    '<script>',
+    'window.addEventListener("load",function(){',
+    '  setTimeout(function(){ window.print(); setTimeout(function(){ window.close(); },500); },900);',
+    '});',
+    '<' + '/script>',
+    '</body></html>'
+  ];
+
+  var printHTML = lines.join('');
+
+  // Use Blob URL — avoids document.write quirks entirely
+  var blob = new Blob([printHTML], { type: 'text/html;charset=utf-8' });
+  var blobURL = URL.createObjectURL(blob);
+  var win = window.open(blobURL, '_blank');
+  if (!win) {
+    alert('Please allow pop-ups for this page to use PDF export.');
+    URL.revokeObjectURL(blobURL);
+    return;
+  }
+  // Clean up blob URL after window loads
+  setTimeout(function(){ URL.revokeObjectURL(blobURL); }, 10000);
 });
 
-/* ═══════════════════════════════════════════════════
+
+/* ═══════════════════════════════════════════════
    EXPORT DOCX
-   ═══════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════ */
 document.getElementById('btnExportDocx').addEventListener('click', async () => {
   showProg('Building DOCX…');
   await new Promise(r => setTimeout(r, 80));
