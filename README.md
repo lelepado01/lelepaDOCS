@@ -55,4 +55,4 @@ The status bar at the bottom provides real-time feedback on your document, inclu
 
 ---
 
-*This description was written by AI, yes.*
+*This description and code were written by AI, yes.*
