@@ -175,18 +175,18 @@ body {
   border: none;
   outline: none;
   resize: none;
-  padding: 28px 60px 28px 32px;
+  padding: 28px 68px 28px 32px;
   overflow-y: scroll;
   tab-size: 2;
   caret-color: var(--accent);
 }
 #mdEditor::placeholder { color: var(--ink-faint); }
 
-/* Syllable gutter */
+/* Syllable / stress gutter */
 #syllGutter {
   position: absolute;
   top: 0; right: 0;
-  width: 52px;
+  width: 64px;
   bottom: 0;
   pointer-events: none;
   overflow: hidden;
@@ -195,8 +195,7 @@ body {
 }
 .syl-badge {
   position: absolute;
-  right: 0;
-  left: 0;
+  right: 0; left: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -204,12 +203,59 @@ body {
   font-size: 10px;
   font-weight: 500;
   color: var(--ink-faint);
-  transition: color .1s;
   user-select: none;
 }
-.syl-badge[data-haiku="5"]  { color: #059669; }
-.syl-badge[data-haiku="7"]  { color: var(--accent); }
-.syl-badge[data-haiku="hit"] { font-weight: 700; }
+/* Syllable mode colours */
+.syl-badge[data-haiku="5"] { color: #059669; }
+.syl-badge[data-haiku="7"] { color: var(--accent); }
+
+/* Stress mode */
+.stress-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  padding: 0 4px;
+}
+.stress-dot {
+  display: inline-block;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.stress-dot.on  { width: 6px; height: 6px; background: var(--accent); }
+.stress-dot.off { width: 4px; height: 4px; background: var(--border-dark); }
+
+/* Match / mismatch tints in stress mode */
+.syl-badge[data-match="yes"] .stress-dot.on  { background: #059669; }
+.syl-badge[data-match="no"]  { background: rgba(251,191,36,.08); }
+.syl-badge[data-match="no"]  .stress-dot.on  { background: #D97706; }
+.syl-badge[data-match="solo"] { opacity: .5; }
+
+/* Gutter mode toggle button in pane label */
+.pane-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.gutter-toggle {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  pointer-events: all;
+}
+.gt-btn {
+  font-size: 9.5px; font-weight: 600; letter-spacing: .3px;
+  padding: 1px 7px; border: none; background: transparent;
+  color: var(--ink-faint); cursor: pointer; font-family: 'DM Sans', sans-serif;
+  transition: .12s; text-transform: uppercase;
+}
+.gt-btn:hover { background: var(--bg); color: var(--ink); }
+.gt-btn.on { background: var(--accent-light); color: var(--accent); }
+.gt-btn + .gt-btn { border-left: 1px solid var(--border); }
 
 /* Preview pane */
 .preview-scroll {
@@ -425,7 +471,13 @@ body[data-view="preview"] .pane:nth-child(1) { display: none; }
 <div class="main-area">
   <!-- Editor Pane -->
   <div class="pane">
-    <div class="pane-label">Markdown</div>
+    <div class="pane-label">
+      Markdown
+      <div class="gutter-toggle">
+        <button class="gt-btn on" id="gtSyl">Syllables</button>
+        <button class="gt-btn" id="gtStress">Stress</button>
+      </div>
+    </div>
     <div class="editor-wrap">
       <textarea id="mdEditor" spellcheck="true" placeholder="Start writing in Markdown…
 
@@ -493,61 +545,199 @@ renderer.listitem = function(text, task, checked) {
 };
 marked.use({ renderer });
 
-const editor   = document.getElementById('mdEditor');
-const preview  = document.getElementById('preview');
+const editor       = document.getElementById('mdEditor');
+const preview      = document.getElementById('preview');
 const previewEmpty = document.getElementById('previewEmpty');
-const syllGutter = document.getElementById('syllGutter');
+const syllGutter   = document.getElementById('syllGutter');
 
-/* ── Syllable counting ── */
+/* ═══════════════════════════════════════════════════
+   SYLLABLE + STRESS ENGINE
+   ═══════════════════════════════════════════════════ */
+
+/* Common function/grammatical words: receive no stress */
+const UNSTRESSED = new Set([
+  'a','an','the','and','or','but','nor','so','yet','for',
+  'in','on','at','to','of','with','by','from','as','into','onto','upon',
+  'is','are','was','were','be','been','being','am',
+  'it','its','this','that','these','those',
+  'he','she','they','we','you','i','me','him','her','us','them',
+  'my','your','his','our','their','thy',
+  'do','does','did','have','has','had',
+  'will','would','shall','should','may','might','must','can','could',
+  'not','no','nor','than','then','when','where','who','which','what','how',
+  'if','though','although','because','since','while','after','before','until',
+  'up','down','out','off','over','under','again','about','above','below',
+]);
+
+/* Count syllables in a single clean word */
 function countSyllables(word) {
   word = word.toLowerCase().replace(/[^a-z]/g, '');
   if (!word) return 0;
   if (word.length <= 3) return 1;
-  // Remove trailing silent e patterns
   word = word.replace(/(?:[^laeiouy]es|[^laeiouy]ed|[^laeiouy]e)$/, '');
   word = word.replace(/^y/, '');
   const m = word.match(/[aeiouy]{1,2}/g);
-  return m ? m.length : 1;
+  return Math.max(1, m ? m.length : 1);
 }
 
-function lineSyllables(line) {
-  // Strip markdown syntax so # ** _ ` etc. don't add phantom syllable words
-  const text = line
-    .replace(/^#+\s*/, '')          // headings
-    .replace(/[*_~`>[\]()!]/g, '')  // inline markers
-    .replace(/https?:\/\/\S+/g, '') // URLs
+/* Return stress array for a single word: e.g. [0,1,0] = unstressed-STRESSED-unstressed */
+function wordStress(raw) {
+  const clean = raw.toLowerCase().replace(/[^a-z]/g, '');
+  if (!clean) return [];
+  const syls = countSyllables(clean);
+
+  // Function words → all unstressed
+  if (UNSTRESSED.has(clean)) return new Array(syls).fill(0);
+  // One syllable content word → stressed
+  if (syls === 1) return [1];
+
+  // Suffix-based rules (stressFromEnd = 0 → last syl, 1 → penult, 2 → antepenult)
+  const rules = [
+    [/ee$|eer$|esque$|ette$/, 0],              // ma-CHINE, rou-LETTE
+    [/tion$|sion$|cian$/, 1],                  // na-TION-al → stress before suffix
+    [/ic$|ics$|ical$/, 1],                     // mu-SIC, crit-I-cal
+    [/ity$|ety$/, 2],                          // u-NIV-er-si-ty (approx antepenult)
+    [/ify$|ize$|ise$/, 2],                     // mod-I-fy
+    [/ous$|eous$|ious$/, 1],                   // fa-MOUS
+    [/ment$|ness$|ful$|less$|ship$|hood$/, 1], // DARK-ness, GRACE-ful
+    [/ing$|ed$|er$|or$|ar$|ly$|ry$/, 1],       // WRI-ter, QUICK-ly
+  ];
+
+  let fromEnd = 1; // default: penultimate stress
+  for (const [re, fe] of rules) {
+    if (re.test(clean)) { fromEnd = fe; break; }
+  }
+
+  const stressIdx = Math.max(0, syls - 1 - fromEnd);
+  const pattern = new Array(syls).fill(0);
+  pattern[stressIdx] = 1;
+  return pattern;
+}
+
+/* Strip markdown decoration from a line, return plain text */
+function stripMd(line) {
+  return line
+    .replace(/^#+\s*/, '')
+    .replace(/!\[.*?\]\(.*?\)/g, '')
+    .replace(/\[([^\]]+)\]\(.*?\)/g, '$1')
+    .replace(/[*_~`>![\]()]/g, '')
+    .replace(/https?:\/\/\S+/g, '')
     .trim();
-  if (!text) return 0;
-  return text.split(/\s+/).reduce((sum, w) => sum + countSyllables(w), 0);
 }
 
-/* ── Gutter renderer ── */
-const FONT_SIZE  = 13.5;
-const LINE_H_EM  = 1.75;
-const LINE_H_PX  = FONT_SIZE * LINE_H_EM; // ≈23.625
-const PAD_TOP    = 28;
-const BADGE_H    = LINE_H_PX;
+/* Syllable count for a line */
+function lineSyllables(line) {
+  const text = stripMd(line);
+  if (!text) return 0;
+  return text.split(/\s+/).reduce((s, w) => s + countSyllables(w), 0);
+}
+
+/* Full stress pattern for a line: array of 0/1 per syllable */
+function lineStressPattern(line) {
+  const text = stripMd(line);
+  if (!text) return [];
+  const pat = [];
+  for (const w of text.split(/\s+/).filter(Boolean)) {
+    pat.push(...wordStress(w));
+  }
+  return pat;
+}
+
+/* Encode pattern as a string key for comparison */
+const patKey = pat => pat.join('');
+
+/* Find the plurality pattern among non-empty lines */
+function dominantPattern(lines) {
+  const freq = {};
+  for (const line of lines) {
+    const pat = lineStressPattern(line);
+    if (!pat.length) continue;
+    const k = patKey(pat);
+    freq[k] = (freq[k] || 0) + 1;
+  }
+  let best = null, bestN = 0;
+  for (const [k, n] of Object.entries(freq)) {
+    if (n > bestN) { best = k; bestN = n; }
+  }
+  return { dominant: best, count: bestN, total: Object.keys(freq).length };
+}
+
+/* ═══════════════════════════════════════════════════
+   GUTTER RENDERING
+   ═══════════════════════════════════════════════════ */
+const FONT_SIZE = 13.5;
+const LINE_H_PX = FONT_SIZE * 1.75;  // matches CSS line-height: 1.75
+const PAD_TOP   = 28;
+const BADGE_H   = LINE_H_PX;
+
+let gutterMode = 'syl'; // 'syl' | 'stress'
 
 function updateGutter() {
-  const lines     = editor.value.split('\n');
+  const lines = editor.value.split('\n');
   const scrollTop = editor.scrollTop;
+  const gutterH = syllGutter.clientHeight;
   const fragments = [];
 
-  lines.forEach((line, i) => {
-    const syl = lineSyllables(line);
-    if (syl === 0) return;
-    const y = PAD_TOP + i * LINE_H_PX - scrollTop;
-    // Only render badges that are visible
-    if (y + BADGE_H < 0 || y > syllGutter.clientHeight + BADGE_H) return;
-    // Haiku highlighting: 5 or 7 syllables get special colour via data attr
-    const haikuAttr = (syl === 5 || syl === 7) ? ` data-haiku="${syl}"` : '';
-    fragments.push(
-      `<div class="syl-badge"${haikuAttr} style="top:${y.toFixed(1)}px;height:${BADGE_H.toFixed(1)}px">${syl}</div>`
-    );
-  });
+  if (gutterMode === 'stress') {
+    // Pre-compute dominant pattern for colour coding
+    const { dominant, count, total } = dominantPattern(lines);
+    const solo = total <= 1; // only one unique pattern → no comparison to make
+
+    for (let i = 0; i < lines.length; i++) {
+      const pat = lineStressPattern(lines[i]);
+      if (!pat.length) continue;
+      const y = PAD_TOP + i * LINE_H_PX - scrollTop;
+      if (y + BADGE_H < 0 || y > gutterH + BADGE_H) continue;
+
+      const k = patKey(pat);
+      let matchAttr = '';
+      if (solo) {
+        matchAttr = ' data-match="solo"';
+      } else if (dominant && k === dominant && count > 1) {
+        matchAttr = ' data-match="yes"';
+      } else if (dominant && k !== dominant) {
+        matchAttr = ' data-match="no"';
+      }
+
+      const dots = pat.map(s =>
+        `<span class="stress-dot ${s ? 'on' : 'off'}"></span>`
+      ).join('');
+
+      fragments.push(
+        `<div class="syl-badge"${matchAttr} style="top:${y.toFixed(1)}px;height:${BADGE_H.toFixed(1)}px">` +
+        `<div class="stress-dots">${dots}</div></div>`
+      );
+    }
+  } else {
+    // Syllable count mode (original)
+    for (let i = 0; i < lines.length; i++) {
+      const syl = lineSyllables(lines[i]);
+      if (syl === 0) continue;
+      const y = PAD_TOP + i * LINE_H_PX - scrollTop;
+      if (y + BADGE_H < 0 || y > gutterH + BADGE_H) continue;
+      const haikuAttr = (syl === 5 || syl === 7) ? ` data-haiku="${syl}"` : '';
+      fragments.push(
+        `<div class="syl-badge"${haikuAttr} style="top:${y.toFixed(1)}px;height:${BADGE_H.toFixed(1)}px">${syl}</div>`
+      );
+    }
+  }
 
   syllGutter.innerHTML = fragments.join('');
 }
+
+/* Mode toggle buttons */
+document.getElementById('gtSyl').addEventListener('click', () => {
+  gutterMode = 'syl';
+  document.getElementById('gtSyl').classList.add('on');
+  document.getElementById('gtStress').classList.remove('on');
+  updateGutter();
+});
+document.getElementById('gtStress').addEventListener('click', () => {
+  gutterMode = 'stress';
+  document.getElementById('gtStress').classList.add('on');
+  document.getElementById('gtSyl').classList.remove('on');
+  updateGutter();
+});
 
 /* ── Render markdown → HTML ── */
 function renderPreview() {
@@ -589,7 +779,6 @@ editor.addEventListener('input', () => {
   autosave();
   updateGutter();
 });
-
 editor.addEventListener('scroll', updateGutter);
 
 /* ── Status bar ── */
