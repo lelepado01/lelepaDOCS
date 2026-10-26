@@ -349,10 +349,63 @@ body[data-view="preview"] .pane:nth-child(1) { display: none; }
   font-family: 'DM Sans', sans-serif; box-shadow: 0 3px 10px rgba(30,33,40,.25);
 }
 
+/* ── Word helper panel (rhymes / synonyms) ── */
+.helper-panel {
+  width: 320px; flex-shrink: 0; display: none; flex-direction: column;
+  background: var(--toolbar-bg); border-left: 1px solid var(--border); min-height: 0;
+}
+body.helper-open .helper-panel { display: flex; }
+.hp-tabs { display: flex; align-items: center; border-bottom: 1px solid var(--border); padding: 0 8px; flex-shrink: 0; }
+.hp-tab {
+  padding: 10px 12px; font-size: 12.5px; font-weight: 500; background: none; border: none;
+  border-bottom: 2px solid transparent; color: var(--ink-muted); cursor: pointer;
+  font-family: 'DM Sans', sans-serif; margin-bottom: -1px;
+}
+.hp-tab:hover { color: var(--ink); }
+.hp-tab.on { color: var(--accent); border-bottom-color: var(--accent); }
+.hp-close {
+  margin-left: auto; width: 26px; height: 26px; border: none; background: none; cursor: pointer;
+  font-size: 18px; line-height: 1; color: var(--ink-faint); border-radius: 5px;
+}
+.hp-close:hover { background: var(--bg); color: var(--ink); }
+.hp-search { display: flex; gap: 6px; padding: 12px 12px 8px; flex-shrink: 0; }
+.hp-search input {
+  flex: 1; min-width: 0; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--ink);
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; background: var(--editor-bg);
+}
+.hp-search input:focus { outline: none; border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px var(--accent-glow); }
+.hp-search .btn { padding: 6px 10px; }
+.hp-modes { display: flex; gap: 6px; padding: 0 12px 8px; flex-shrink: 0; }
+.hp-mode {
+  font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 99px; cursor: pointer;
+  border: 1px solid var(--border); background: transparent; color: var(--ink-muted); font-family: 'DM Sans', sans-serif;
+}
+.hp-mode:hover { border-color: var(--border-dark); color: var(--ink); }
+.hp-mode.on { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+.hp-status { font-size: 11px; color: var(--ink-faint); padding: 0 14px 6px; min-height: 18px; flex-shrink: 0; }
+.hp-results { flex: 1; overflow-y: auto; padding: 0 12px 12px; }
+.hp-group-label {
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .7px;
+  color: var(--ink-faint); margin: 12px 2px 6px;
+}
+.hp-group-label:first-child { margin-top: 2px; }
+.hp-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.hp-chip {
+  font-family: 'DM Sans', sans-serif; font-size: 12.5px; padding: 3px 9px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--editor-bg); color: var(--ink); cursor: pointer; transition: .1s;
+}
+.hp-chip:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent-dark); }
+.hp-foot { font-size: 10.5px; color: var(--ink-faint); padding: 8px 14px; border-top: 1px solid var(--border); flex-shrink: 0; line-height: 1.5; }
+.hp-results::-webkit-scrollbar { width: 6px; }
+.hp-results::-webkit-scrollbar-thumb { background: var(--border-dark); border-radius: 3px; }
+@media (max-width: 700px) {
+  .helper-panel { position: fixed; right: 0; top: 54px; bottom: 26px; width: min(320px, 100%); z-index: 300; box-shadow: var(--shadow-deep); }
+}
+
 /* ── Print (PDF export) ── */
 @media print {
   html, body { height: auto; overflow: visible; }
-  .app-header, .toolbar, .pane:first-child, .status-bar { display: none !important; }
+  .app-header, .toolbar, .pane:first-child, .status-bar, .helper-panel { display: none !important; }
   .main-area { display: block; }
   .pane:last-child { display: block !important; border: none; }
   .preview-scroll { overflow: visible; padding: 0; background: #fff; }
@@ -459,6 +512,11 @@ body[data-view="preview"] .pane:nth-child(1) { display: none; }
     <svg viewBox="0 0 24 24"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg>
   </button>
 
+  <div class="tb-sep"></div>
+  <!-- Word helpers -->
+  <button class="tb-btn" id="btnRhyme" data-tip="Rhymes (Alt+R)">Rhymes</button>
+  <button class="tb-btn" id="btnSyn" data-tip="Synonyms (Alt+S)">Synonyms</button>
+
   <!-- View toggle pushed to the right -->
   <div class="view-toggle" style="margin-left:auto">
     <button class="vt-btn" data-view="editor" data-tip="Editor only">Editor</button>
@@ -515,6 +573,24 @@ Use $inline math$ or $$display math$$ for LaTeX.
       </div>
     </div>
   </div>
+
+  <!-- Word helper panel -->
+  <aside class="helper-panel" id="helperPanel" aria-label="Word helper">
+    <div class="hp-tabs">
+      <button class="hp-tab on" data-tab="rhyme">Rhymes</button>
+      <button class="hp-tab" data-tab="syn">Synonyms</button>
+      <button class="hp-close" id="hpClose" aria-label="Close word helper">×</button>
+    </div>
+    <div class="hp-search">
+      <input id="hpInput" type="text" placeholder="Type a word…" spellcheck="false" autocomplete="off">
+      <button class="btn btn-ghost" id="hpGrab" title="Use the word at your cursor">↙</button>
+      <button class="btn btn-accent" id="hpGo">Search</button>
+    </div>
+    <div class="hp-modes" id="hpModes"></div>
+    <div class="hp-status" id="hpStatus"></div>
+    <div class="hp-results" id="hpResults"></div>
+    <div class="hp-foot">Click a word to insert it at your cursor. Rhymes are grouped by syllable count.</div>
+  </aside>
 </div>
 
 <!-- Status Bar -->
@@ -1032,6 +1108,176 @@ editor.addEventListener('keydown', e => {
 
 /* ── Title change → autosave ── */
 document.getElementById('docTitle').addEventListener('input', autosave);
+
+/* ═══════════════════════════════════════════════════
+   WORD HELPER — rhymes + synonyms (Datamuse API)
+   ═══════════════════════════════════════════════════ */
+const HP = {
+  tab: 'rhyme',
+  param: { rhyme: 'rel_rhy', syn: 'rel_syn' },
+  modes: {
+    rhyme: [['rel_rhy', 'Perfect'], ['rel_nry', 'Near']],
+    syn:   [['rel_syn', 'Synonyms'], ['ml', 'Related']],
+  },
+  token: 0,
+};
+const hpPanel = document.getElementById('helperPanel');
+const hpInput = document.getElementById('hpInput');
+const hpWordRe = /[A-Za-z][A-Za-z'’-]*/g;
+
+function hpPickWord() {
+  const v = editor.value;
+  const s = editor.selectionStart, e = editor.selectionEnd;
+  const pick = t => { const m = t.match(hpWordRe); return m ? (HP.tab === 'rhyme' ? m[m.length - 1] : m[0]) : ''; };
+  if (s !== e) { const w = pick(v.slice(s, e)); if (w) return w; }
+  const left  = v.slice(0, s).match(/[A-Za-z'’-]*$/)[0];
+  const right = v.slice(s).match(/^[A-Za-z'’-]*/)[0];
+  if (/[A-Za-z]/.test(left + right)) return left + right;
+  // Nothing under the cursor: use the last word before it (e.g. the line above)
+  for (const line of v.slice(0, s).split('\n').reverse()) {
+    const m = stripMd(line).match(hpWordRe);
+    if (m) return m[m.length - 1];
+  }
+  return '';
+}
+
+function hpBuildModes() {
+  const box = document.getElementById('hpModes');
+  box.innerHTML = '';
+  HP.modes[HP.tab].forEach(([key, label]) => {
+    const b = document.createElement('button');
+    b.className = 'hp-mode' + (HP.param[HP.tab] === key ? ' on' : '');
+    b.textContent = label;
+    b.addEventListener('click', () => { HP.param[HP.tab] = key; hpBuildModes(); hpSearch(); });
+    box.appendChild(b);
+  });
+}
+
+function hpSetTab(tab) {
+  HP.tab = tab;
+  hpPanel.querySelectorAll('.hp-tab').forEach(t => t.classList.toggle('on', t.dataset.tab === tab));
+  document.getElementById('btnRhyme').classList.toggle('active', tab === 'rhyme');
+  document.getElementById('btnSyn').classList.toggle('active', tab === 'syn');
+  hpBuildModes();
+}
+
+function hpOpen(tab) {
+  const wasOpen = document.body.classList.contains('helper-open');
+  document.body.classList.add('helper-open');
+  hpSetTab(tab);
+  if (!wasOpen || !hpInput.value.trim()) hpInput.value = hpPickWord();
+  hpInput.focus(); hpInput.select();
+  hpSearch();
+}
+
+function hpClose() {
+  document.body.classList.remove('helper-open');
+  document.getElementById('btnRhyme').classList.remove('active');
+  document.getElementById('btnSyn').classList.remove('active');
+  editor.focus();
+}
+
+function hpToggle(tab) {
+  if (document.body.classList.contains('helper-open') && HP.tab === tab) hpClose();
+  else hpOpen(tab);
+}
+
+async function hpSearch() {
+  const word = hpInput.value.trim();
+  const out = document.getElementById('hpResults');
+  const st  = document.getElementById('hpStatus');
+  out.innerHTML = '';
+  if (!word) { st.textContent = 'Type a word to search.'; return; }
+  const my = ++HP.token;
+  st.textContent = 'Searching…';
+  try {
+    const url = `https://api.datamuse.com/words?${HP.param[HP.tab]}=${encodeURIComponent(word)}&md=s&max=150`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (my !== HP.token) return;
+    hpRender(data, word);
+  } catch (_) {
+    if (my !== HP.token) return;
+    st.textContent = 'Couldn’t reach the word service. Check your connection and try again.';
+  }
+}
+
+function hpChips(words) {
+  const wrap = document.createElement('div');
+  wrap.className = 'hp-chips';
+  words.forEach(w => {
+    const b = document.createElement('button');
+    b.className = 'hp-chip';
+    b.textContent = w.word;
+    b.title = (w.numSyllables || '?') + ' syllable' + (w.numSyllables === 1 ? '' : 's');
+    wrap.appendChild(b);
+  });
+  return wrap;
+}
+
+function hpRender(data, word) {
+  const out = document.getElementById('hpResults');
+  const st  = document.getElementById('hpStatus');
+  out.innerHTML = '';
+  if (!data.length) { st.textContent = `No results for “${word}”. Try another word or spelling.`; return; }
+  st.textContent = `${data.length} result${data.length !== 1 ? 's' : ''} for “${word}”`;
+  if (HP.tab === 'rhyme') {
+    const groups = {};
+    data.forEach(w => { (groups[w.numSyllables || 0] = groups[w.numSyllables || 0] || []).push(w); });
+    Object.keys(groups).map(Number).sort((a, b) => a - b).forEach(n => {
+      const label = document.createElement('div');
+      label.className = 'hp-group-label';
+      label.textContent = n ? `${n} syllable${n !== 1 ? 's' : ''}` : 'Other';
+      out.appendChild(label);
+      out.appendChild(hpChips(groups[n]));
+    });
+  } else {
+    out.appendChild(hpChips(data));
+  }
+  out.scrollTop = 0;
+}
+
+function hpInsert(word) {
+  editor.focus();
+  // For synonyms, if the cursor is on the searched word, replace that word
+  if (HP.tab === 'syn' && editor.selectionStart === editor.selectionEnd) {
+    const v = editor.value, s = editor.selectionStart;
+    const l = v.slice(0, s).match(/[A-Za-z'’-]*$/)[0];
+    const r = v.slice(s).match(/^[A-Za-z'’-]*/)[0];
+    if ((l + r).toLowerCase() === hpInput.value.trim().toLowerCase() && l + r) {
+      editor.setSelectionRange(s - l.length, s + r.length);
+    }
+  }
+  if (!document.execCommand('insertText', false, word)) {
+    editor.setRangeText(word, editor.selectionStart, editor.selectionEnd, 'end');
+    editor.dispatchEvent(new Event('input'));
+  }
+}
+
+document.getElementById('hpResults').addEventListener('mousedown', e => {
+  if (e.target.closest('.hp-chip')) e.preventDefault(); // keep editor selection
+});
+document.getElementById('hpResults').addEventListener('click', e => {
+  const chip = e.target.closest('.hp-chip');
+  if (chip) hpInsert(chip.textContent);
+});
+hpPanel.querySelectorAll('.hp-tab').forEach(t => t.addEventListener('click', () => { hpSetTab(t.dataset.tab); hpSearch(); }));
+document.getElementById('hpClose').addEventListener('click', hpClose);
+document.getElementById('hpGo').addEventListener('click', hpSearch);
+document.getElementById('hpGrab').addEventListener('click', () => { hpInput.value = hpPickWord(); hpSearch(); });
+hpInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') hpSearch();
+  if (e.key === 'Escape') hpClose();
+});
+document.getElementById('btnRhyme').addEventListener('click', () => hpToggle('rhyme'));
+document.getElementById('btnSyn').addEventListener('click', () => hpToggle('syn'));
+document.addEventListener('keydown', e => {
+  if (!e.altKey || e.ctrlKey || e.metaKey) return;
+  if (e.code === 'KeyR') { e.preventDefault(); hpOpen('rhyme'); }
+  if (e.code === 'KeyS') { e.preventDefault(); hpOpen('syn'); }
+});
+hpBuildModes();
 
 /* ── Init ── */
 loadSaved();
