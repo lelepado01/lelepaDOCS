@@ -398,6 +398,47 @@ body.helper-open .helper-panel { display: flex; }
 .hp-foot { font-size: 10.5px; color: var(--ink-faint); padding: 8px 14px; border-top: 1px solid var(--border); flex-shrink: 0; line-height: 1.5; }
 .hp-results::-webkit-scrollbar { width: 6px; }
 .hp-results::-webkit-scrollbar-thumb { background: var(--border-dark); border-radius: 3px; }
+/* Rhythm view */
+#hpRhythm { display: none; }
+body.hp-rhythm .helper-panel { width: 400px; }
+body.hp-rhythm #hpRhythm { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+body.hp-rhythm .hp-search, body.hp-rhythm .hp-modes, body.hp-rhythm #hpStatus,
+body.hp-rhythm #hpResults, body.hp-rhythm > .helper-panel > .hp-foot-search { display: none; }
+.rh-controls { display: flex; align-items: center; gap: 8px; padding: 12px 14px 6px; font-size: 11.5px; color: var(--ink-muted); flex-shrink: 0; }
+.rh-controls select {
+  flex: 1; font-family: 'DM Sans', sans-serif; font-size: 12px; color: var(--ink);
+  border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; background: var(--editor-bg);
+}
+.rh-summary { padding: 4px 14px 10px; font-size: 12px; color: var(--ink-muted); line-height: 1.5; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.rh-summary b { color: var(--ink); font-weight: 600; }
+.rh-note { font-size: 10.5px; color: var(--ink-faint); margin-top: 2px; }
+.rh-lines { flex: 1; overflow-y: auto; padding: 6px 8px 12px; }
+.rh-empty { padding: 30px 16px; text-align: center; font-size: 12px; color: var(--ink-faint); line-height: 1.7; }
+.rh-row { display: flex; gap: 8px; padding: 7px 6px; border-radius: 6px; cursor: pointer; border: 1px solid transparent; }
+.rh-row.gap { margin-top: 10px; }
+.rh-row:hover { background: var(--bg); }
+.rh-row.cur { background: var(--accent-light); border-color: var(--accent-glow); }
+.rh-scheme {
+  width: 20px; height: 20px; flex-shrink: 0; border-radius: 5px; margin-top: 1px;
+  background: var(--bg); color: var(--ink-muted); font-size: 10.5px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace;
+}
+.rh-body { min-width: 0; flex: 1; }
+.rh-words { display: flex; flex-wrap: wrap; gap: 2px 7px; }
+.rw { display: inline-flex; flex-direction: column; align-items: center; }
+.rt { font-size: 12.5px; color: var(--ink); line-height: 1.35; }
+.rw.est .rt { border-bottom: 1px dashed var(--ink-faint); }
+.rdots { display: flex; gap: 3px; align-items: center; height: 10px; }
+.rd { display: inline-block; border-radius: 50%; box-sizing: border-box; flex-shrink: 0; }
+.rd.s { width: 8px; height: 8px; background: var(--accent); }
+.rd.h { width: 8px; height: 8px; border: 1.5px solid var(--accent); }
+.rd.f { width: 8px; height: 8px; background: var(--accent); opacity: .45; }
+.rd.u { width: 5px; height: 5px; background: var(--border-dark); }
+.rd.bad { background: #D97706; border-color: #D97706; opacity: 1; }
+.rd.h.bad { background: transparent; }
+.rh-meta { font-size: 10.5px; color: var(--ink-faint); margin-top: 3px; }
+.rh-meta .ok { color: #059669; }
+.rh-meta .meh { color: #D97706; }
 @media (max-width: 700px) {
   .helper-panel { position: fixed; right: 0; top: 54px; bottom: 26px; width: min(320px, 100%); z-index: 300; box-shadow: var(--shadow-deep); }
 }
@@ -516,6 +557,7 @@ body.helper-open .helper-panel { display: flex; }
   <!-- Word helpers -->
   <button class="tb-btn" id="btnRhyme" data-tip="Rhymes (Alt+R)">Rhymes</button>
   <button class="tb-btn" id="btnSyn" data-tip="Synonyms (Alt+S)">Synonyms</button>
+  <button class="tb-btn" id="btnRhythm" data-tip="Rhythm, meter &amp; rhyme scheme (Alt+M)">Rhythm</button>
 
   <!-- View toggle pushed to the right -->
   <div class="view-toggle" style="margin-left:auto">
@@ -579,6 +621,7 @@ Use $inline math$ or $$display math$$ for LaTeX.
     <div class="hp-tabs">
       <button class="hp-tab on" data-tab="rhyme">Rhymes</button>
       <button class="hp-tab" data-tab="syn">Synonyms</button>
+      <button class="hp-tab" data-tab="rhythm">Rhythm</button>
       <button class="hp-close" id="hpClose" aria-label="Close word helper">×</button>
     </div>
     <div class="hp-search">
@@ -589,7 +632,24 @@ Use $inline math$ or $$display math$$ for LaTeX.
     <div class="hp-modes" id="hpModes"></div>
     <div class="hp-status" id="hpStatus"></div>
     <div class="hp-results" id="hpResults"></div>
-    <div class="hp-foot">Click a word to insert it at your cursor. Rhymes are grouped by syllable count.</div>
+    <div class="hp-foot hp-foot-search">Click a word to insert it at your cursor. Rhymes are grouped by syllable count.</div>
+
+    <!-- Rhythm view -->
+    <div id="hpRhythm">
+      <div class="rh-controls">
+        <label for="rhMeter">Check against</label>
+        <select id="rhMeter">
+          <option value="auto">Auto-detect meter</option>
+          <option value="iamb">Iambic (da-DUM)</option>
+          <option value="troch">Trochaic (DUM-da)</option>
+          <option value="anap">Anapestic (da-da-DUM)</option>
+          <option value="dact">Dactylic (DUM-da-da)</option>
+        </select>
+      </div>
+      <div class="rh-summary" id="rhSummary"></div>
+      <div class="rh-lines" id="rhLines"></div>
+      <div class="hp-foot">● stressed · ◐ secondary · ● faded = content one-syllable word (flexible) · small dot = unstressed · <span style="color:#D97706">orange</span> = breaks the meter. Dashed words are estimated. Click a line to jump to it.</div>
+    </div>
   </aside>
 </div>
 
@@ -645,8 +705,122 @@ const UNSTRESSED = new Set([
   'up','down','out','off','over','under','again','about','above','below',
 ]);
 
-/* Count syllables in a single clean word */
+/* ── Pronunciation dictionary (CMU-style ARPAbet via Datamuse) ──
+   Looked up per word, cached in memory + localStorage. Until a word is
+   resolved (or if offline / not in the dictionary) the spelling-based
+   estimate below is used instead. */
+const PRON = new Map();               // key -> { pron: 'K AE1 T' | null, stress: ['1'] | null }
+const PRON_LS = 'lelepaMD_pron_v1';
+let pronQueue = new Set(), pronActive = 0, pronOfflineUntil = 0, pronSaveTimer, pronRefreshTimer;
+
+function setPron(k, pron) {
+  const stress = pron ? (pron.match(/\d/g) || []) : [];
+  PRON.set(k, pron && stress.length ? { pron, stress } : { pron: null, stress: null });
+}
+function loadPronCache() {
+  try {
+    const o = JSON.parse(localStorage.getItem(PRON_LS) || '{}');
+    for (const k in o) if (o[k]) setPron(k, o[k]);
+  } catch (_) {}
+}
+function savePronCache() {
+  clearTimeout(pronSaveTimer);
+  pronSaveTimer = setTimeout(() => {
+    try {
+      const o = {};
+      PRON.forEach((v, k) => { if (v.pron) o[k] = v.pron; }); // only persist hits
+      localStorage.setItem(PRON_LS, JSON.stringify(o));
+    } catch (_) {}
+  }, 1000);
+}
+/* "Don't" -> ["don't"], "well-known" -> ["well","known"] */
+function wordKeys(raw) {
+  return raw.toLowerCase().replace(/[’‘]/g, "'").split(/[-–—]+/)
+    .map(p => p.replace(/[^a-z']/g, '').replace(/^'+|'+$/g, '')).filter(Boolean);
+}
+async function fetchPron(k) {
+  try {
+    const r = await fetch(`https://api.datamuse.com/words?sp=${encodeURIComponent(k)}&md=r&max=10`);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    const hit = data.find(x => x.word.toLowerCase() === k);
+    const tag = hit && (hit.tags || []).find(t => t.startsWith('pron:'));
+    setPron(k, tag ? tag.slice(5).trim() : null);
+    pronRefreshSoon();
+  } catch (_) {
+    pronOfflineUntil = Date.now() + 30000;   // back off, estimates are used meanwhile
+  }
+}
+function pronPump() {
+  while (pronActive < 4 && pronQueue.size && Date.now() >= pronOfflineUntil) {
+    const k = pronQueue.values().next().value;
+    pronQueue.delete(k);
+    if (PRON.has(k)) continue;
+    pronActive++;
+    fetchPron(k).finally(() => { pronActive--; pronPump(); if (!pronActive && !pronQueue.size) pronRefreshSoon(); });
+  }
+}
+function pronRequest(keys) {
+  let n = 0;
+  for (const k of keys) { if (!PRON.has(k) && n++ < 400) pronQueue.add(k); }
+  pronPump();
+}
+function pronPrefetch() {
+  const v = editor.value, st = editor.selectionStart;
+  const typing = document.activeElement === editor
+    ? wordKeys((v.slice(0, st).match(/[A-Za-z'’-]*$/) || [''])[0] + (v.slice(st).match(/^[A-Za-z'’-]*/) || [''])[0])
+    : [];
+  const keys = new Set();
+  for (const line of v.split('\n')) {
+    for (const w of stripMd(line).split(/\s+/)) {
+      for (const k of wordKeys(w)) if (!PRON.has(k) && !typing.includes(k)) keys.add(k);
+    }
+  }
+  pronRequest(keys);
+}
+let pronPrefetchTimer;
+function pronPrefetchSoon() { clearTimeout(pronPrefetchTimer); pronPrefetchTimer = setTimeout(pronPrefetch, 700); }
+function pronRefreshSoon() {
+  clearTimeout(pronRefreshTimer);
+  pronRefreshTimer = setTimeout(() => {
+    updateGutter();
+    if (typeof renderRhythm === 'function') renderRhythm();
+    savePronCache();
+  }, 200);
+}
+
+/* Syllable count for one lookup key (dictionary first, then estimate) */
+function keySyl(k) {
+  const p = PRON.get(k);
+  return p && p.stress ? p.stress.length : heurSyl(k.replace(/'/g, ''));
+}
 function countSyllables(word) {
+  return wordKeys(word).reduce((a, k) => a + keySyl(k), 0);
+}
+
+/* Per-syllable codes for one key:
+   0 unstressed · 1 primary · 2 secondary · 3 one-syllable content word (flexible) · 4 one-syllable function word */
+function keyScan(k) {
+  const p = PRON.get(k);
+  const fn = UNSTRESSED.has(k);
+  if (p && p.stress) {
+    const st = p.stress;
+    if (st.length === 1) return { codes: [fn ? 4 : 3], est: false };
+    return { codes: st.map(d => d === '1' ? 1 : d === '2' ? 2 : 0), est: false };
+  }
+  const h = heurStress(k.replace(/'/g, ''));
+  if (h.length === 1) return { codes: [fn ? 4 : 3], est: true };
+  return { codes: h.map(x => x ? 1 : 0), est: true };
+}
+/* Gutter stress (0/1) for a raw word */
+function wordStress(raw) {
+  const out = [];
+  for (const k of wordKeys(raw)) out.push(...keyScan(k).codes.map(c => (c === 0 || c === 4) ? 0 : 1));
+  return out;
+}
+
+/* ── Spelling-based fallback estimate ── */
+function heurSyl(word) {
   word = word.toLowerCase().replace(/[^a-z]/g, '');
   if (!word) return 0;
   if (word.length <= 3) return 1;
@@ -657,10 +831,10 @@ function countSyllables(word) {
 }
 
 /* Return stress array for a single word: e.g. [0,1,0] = unstressed-STRESSED-unstressed */
-function wordStress(raw) {
+function heurStress(raw) {
   const clean = raw.toLowerCase().replace(/[^a-z]/g, '');
   if (!clean) return [];
-  const syls = countSyllables(clean);
+  const syls = heurSyl(clean);
 
   // Function words → all unstressed
   if (UNSTRESSED.has(clean)) return new Array(syls).fill(0);
@@ -1144,7 +1318,7 @@ function hpPickWord() {
 function hpBuildModes() {
   const box = document.getElementById('hpModes');
   box.innerHTML = '';
-  HP.modes[HP.tab].forEach(([key, label]) => {
+  (HP.modes[HP.tab] || []).forEach(([key, label]) => {
     const b = document.createElement('button');
     b.className = 'hp-mode' + (HP.param[HP.tab] === key ? ' on' : '');
     b.textContent = label;
@@ -1158,6 +1332,8 @@ function hpSetTab(tab) {
   hpPanel.querySelectorAll('.hp-tab').forEach(t => t.classList.toggle('on', t.dataset.tab === tab));
   document.getElementById('btnRhyme').classList.toggle('active', tab === 'rhyme');
   document.getElementById('btnSyn').classList.toggle('active', tab === 'syn');
+  document.getElementById('btnRhythm').classList.toggle('active', tab === 'rhythm');
+  document.body.classList.toggle('hp-rhythm', tab === 'rhythm');
   hpBuildModes();
 }
 
@@ -1165,6 +1341,7 @@ function hpOpen(tab) {
   const wasOpen = document.body.classList.contains('helper-open');
   document.body.classList.add('helper-open');
   hpSetTab(tab);
+  if (tab === 'rhythm') { renderRhythm(); return; }
   if (!wasOpen || !hpInput.value.trim()) hpInput.value = hpPickWord();
   hpInput.focus(); hpInput.select();
   hpSearch();
@@ -1174,6 +1351,8 @@ function hpClose() {
   document.body.classList.remove('helper-open');
   document.getElementById('btnRhyme').classList.remove('active');
   document.getElementById('btnSyn').classList.remove('active');
+  document.getElementById('btnRhythm').classList.remove('active');
+  document.body.classList.remove('hp-rhythm');
   editor.focus();
 }
 
@@ -1183,6 +1362,7 @@ function hpToggle(tab) {
 }
 
 async function hpSearch() {
+  if (HP.tab === 'rhythm') return;
   const word = hpInput.value.trim();
   const out = document.getElementById('hpResults');
   const st  = document.getElementById('hpStatus');
@@ -1262,7 +1442,12 @@ document.getElementById('hpResults').addEventListener('click', e => {
   const chip = e.target.closest('.hp-chip');
   if (chip) hpInsert(chip.textContent);
 });
-hpPanel.querySelectorAll('.hp-tab').forEach(t => t.addEventListener('click', () => { hpSetTab(t.dataset.tab); hpSearch(); }));
+hpPanel.querySelectorAll('.hp-tab').forEach(t => t.addEventListener('click', () => {
+  hpSetTab(t.dataset.tab);
+  if (t.dataset.tab === 'rhythm') { renderRhythm(); return; }
+  if (!hpInput.value.trim()) hpInput.value = hpPickWord();
+  hpSearch();
+}));
 document.getElementById('hpClose').addEventListener('click', hpClose);
 document.getElementById('hpGo').addEventListener('click', hpSearch);
 document.getElementById('hpGrab').addEventListener('click', () => { hpInput.value = hpPickWord(); hpSearch(); });
@@ -1272,12 +1457,208 @@ hpInput.addEventListener('keydown', e => {
 });
 document.getElementById('btnRhyme').addEventListener('click', () => hpToggle('rhyme'));
 document.getElementById('btnSyn').addEventListener('click', () => hpToggle('syn'));
+document.getElementById('btnRhythm').addEventListener('click', () => hpToggle('rhythm'));
 document.addEventListener('keydown', e => {
   if (!e.altKey || e.ctrlKey || e.metaKey) return;
   if (e.code === 'KeyR') { e.preventDefault(); hpOpen('rhyme'); }
   if (e.code === 'KeyS') { e.preventDefault(); hpOpen('syn'); }
+  if (e.code === 'KeyM') { e.preventDefault(); hpOpen('rhythm'); }
 });
 hpBuildModes();
+
+/* ═══════════════════════════════════════════════════
+   RHYTHM PANEL — scansion, meter fit, rhyme scheme
+   ═══════════════════════════════════════════════════ */
+const RH_TPL   = { iamb: [0, 1], troch: [1, 0], anap: [0, 0, 1], dact: [1, 0, 0] };
+const RH_NAME  = { iamb: 'iambic', troch: 'trochaic', anap: 'anapestic', dact: 'dactylic' };
+const RH_FOOT  = ['', 'monometer', 'dimeter', 'trimeter', 'tetrameter', 'pentameter', 'hexameter', 'heptameter', 'octameter'];
+const RH_ORDER = ['iamb', 'troch', 'anap', 'dact'];
+const RH_MIN_FIT = 0.65;
+
+/* How well an observed syllable code fits a metrical slot (1 = stressed slot, 0 = weak slot).
+   Codes 0/1 come from multi-syllable words (hard evidence); 2/3/4 are softer. */
+function rhSlot(obs, strong) {
+  if (strong) return obs === 1 ? 1 : obs === 2 ? 0.8 : obs === 3 ? 0.8 : obs === 4 ? 0.3 : 0;
+  return (obs === 0 || obs === 4) ? 1 : obs === 3 ? 0.6 : obs === 2 ? 0.5 : 0;
+}
+function rhFit(codes, key) {
+  const t = RH_TPL[key]; let sum = 0, wsum = 0; const bad = [];
+  codes.forEach((c, j) => {
+    const sc = rhSlot(c, t[j % t.length]);
+    const w = (c === 0 || c === 1) ? 2.5 : 1;   // lexical stress of longer words counts more
+    sum += sc * w; wsum += w; bad.push(sc === 0);
+  });
+  return { fit: sum / wsum, bad };
+}
+function rhLabel(key, n) {
+  const size = RH_TPL[key].length;
+  const feet = Math.max(1, n % size === 1 ? Math.floor(n / size) : Math.round(n / size));
+  return RH_NAME[key] + ' ' + (RH_FOOT[feet] || feet + ' feet');
+}
+
+/* Rhyme sound of a line's last word: from its last stressed vowel to the end */
+function rhRhymeKey(raw) {
+  const ks = wordKeys(raw), k = ks[ks.length - 1];
+  if (!k) return '';
+  const p = PRON.get(k);
+  if (p && p.pron) {
+    const ph = p.pron.split(/\s+/);
+    let idx = -1;
+    for (let i = ph.length - 1; i >= 0 && idx < 0; i--) if (/1$/.test(ph[i])) idx = i;
+    for (let i = ph.length - 1; i >= 0 && idx < 0; i--) if (/2$/.test(ph[i])) idx = i;
+    if (idx < 0) idx = Math.max(0, ph.findIndex(x => /\d$/.test(x)));
+    return ph.slice(idx).map(x => x.replace(/\d/, '')).join(' ');
+  }
+  const m = k.replace(/'/g, '').match(/[aeiouy]+[^aeiouy]*e?$/);
+  return 'est:' + (m ? m[0] : k);
+}
+
+function rhAnalyze() {
+  const target = document.getElementById('rhMeter').value;
+  const rows = []; let inFence = false, stanza = 0;
+  editor.value.split('\n').forEach((ln, i) => {
+    if (/^\s*```/.test(ln)) { inFence = !inFence; stanza++; return; }
+    if (inFence) return;
+    const t = ln.trim();
+    if (!t || /^(#{1,6}\s|-{3,}$|\*{3,}$|\|)/.test(t)) { stanza++; return; }
+    const text = stripMd(ln);
+    const raws = text.split(/\s+/).filter(w => /[A-Za-z]/.test(w));
+    if (!raws.length) return;
+    const blocks = []; const codes = [];
+    for (const w of raws) {
+      let wc = [], est = false;
+      for (const k of wordKeys(w)) { const sc = keyScan(k); wc = wc.concat(sc.codes); est = est || sc.est; }
+      if (!wc.length) continue;
+      blocks.push({ text: w, codes: wc, est });
+      codes.push(...wc);
+    }
+    if (!codes.length) return;
+    let m = null;
+    if (codes.length >= 3) {
+      const keys = target === 'auto' ? RH_ORDER : [target];
+      for (const key of keys) {
+        const r = rhFit(codes, key);
+        if (!m || r.fit > m.fit) m = { key, fit: r.fit, bad: r.bad };
+      }
+      m.label = rhLabel(m.key, codes.length);
+    }
+    rows.push({ i, stanza, blocks, n: codes.length, m, rhyme: rhRhymeKey(raws[raws.length - 1]) });
+  });
+  // Rhyme scheme letters, restarting each stanza
+  let cur = -1, map = {}, next = 0;
+  rows.forEach(r => {
+    if (r.stanza !== cur) { cur = r.stanza; map = {}; next = 0; }
+    if (!r.rhyme) { r.scheme = '–'; return; }
+    if (!(r.rhyme in map)) map[r.rhyme] = String.fromCharCode(65 + (next++ % 26));
+    r.scheme = map[r.rhyme];
+  });
+  return { rows, target };
+}
+
+function rhCurrentLine() {
+  return editor.value.slice(0, editor.selectionStart).split('\n').length - 1;
+}
+function rhHighlight(scroll) {
+  const box = document.getElementById('rhLines');
+  const ci = rhCurrentLine();
+  let hit = null;
+  box.querySelectorAll('.rh-row').forEach(r => {
+    const on = +r.dataset.line === ci;
+    r.classList.toggle('cur', on);
+    if (on) hit = r;
+  });
+  if (hit && scroll) hit.scrollIntoView({ block: 'nearest' });
+}
+
+function renderRhythm() {
+  if (!document.body.classList.contains('helper-open') || HP.tab !== 'rhythm') return;
+  const { rows, target } = rhAnalyze();
+  const box = document.getElementById('rhLines');
+  const sum = document.getElementById('rhSummary');
+  box.innerHTML = '';
+  if (!rows.length) {
+    sum.innerHTML = '';
+    box.innerHTML = '<div class="rh-empty">Write a few lines in the editor and the stress pattern, meter and rhyme scheme will show up here.</div>';
+    return;
+  }
+  // make sure every word is (being) looked up
+  const all = new Set();
+  rows.forEach(r => r.blocks.forEach(b => wordKeys(b.text).forEach(k => all.add(k))));
+  pronRequest(all);
+
+  // Summary
+  const counts = {}; let fitSum = 0, fitN = 0, minS = Infinity, maxS = 0;
+  rows.forEach(r => {
+    minS = Math.min(minS, r.n); maxS = Math.max(maxS, r.n);
+    if (r.m) { fitSum += r.m.fit; fitN++; if (r.m.fit >= RH_MIN_FIT) counts[r.m.label] = (counts[r.m.label] || 0) + 1; }
+  });
+  const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+  const pending = pronQueue.size + pronActive;
+  let html = top
+    ? `<b>${top[0]}</b> — ${top[1]} of ${rows.length} lines`
+    : '<b>No consistent meter</b> detected yet';
+  html += ` · ${minS === maxS ? minS : minS + '–' + maxS} syllables per line`;
+  if (fitN) html += ` · avg fit ${Math.round(100 * fitSum / fitN)}%`;
+  let note = '';
+  if (pending) note = `Looking up ${pending} word${pending !== 1 ? 's' : ''}…`;
+  else if (Date.now() < pronOfflineUntil) note = 'Offline: using spelling-based estimates (dashed words).';
+  sum.innerHTML = html + (note ? `<div class="rh-note">${note}</div>` : '');
+
+  // Rows
+  let prevStanza = null;
+  rows.forEach(r => {
+    const row = document.createElement('div');
+    row.className = 'rh-row' + (prevStanza !== null && r.stanza !== prevStanza ? ' gap' : '');
+    row.dataset.line = r.i;
+    prevStanza = r.stanza;
+    const sch = document.createElement('div');
+    sch.className = 'rh-scheme'; sch.textContent = r.scheme; sch.title = 'Rhyme scheme';
+    const body = document.createElement('div'); body.className = 'rh-body';
+    const words = document.createElement('div'); words.className = 'rh-words';
+    let off = 0;
+    r.blocks.forEach(b => {
+      const w = document.createElement('span'); w.className = 'rw' + (b.est ? ' est' : '');
+      const t = document.createElement('span'); t.className = 'rt'; t.textContent = b.text;
+      const d = document.createElement('span'); d.className = 'rdots';
+      b.codes.forEach((c, j) => {
+        const dot = document.createElement('span');
+        dot.className = 'rd ' + (c === 1 ? 's' : c === 2 ? 'h' : c === 3 ? 'f' : 'u') + (r.m && r.m.bad[off + j] ? ' bad' : '');
+        d.appendChild(dot);
+      });
+      off += b.codes.length;
+      w.append(t, d); words.appendChild(w);
+    });
+    const meta = document.createElement('div'); meta.className = 'rh-meta';
+    meta.textContent = r.n + ' syllable' + (r.n !== 1 ? 's' : '');
+    if (r.m) {
+      const pct = Math.round(r.m.fit * 100);
+      meta.append(' · ' + (r.m.fit >= RH_MIN_FIT ? r.m.label : 'loose ' + RH_NAME[r.m.key]) + ' · ');
+      const f = document.createElement('span'); f.className = r.m.fit >= 0.85 ? 'ok' : r.m.fit < RH_MIN_FIT ? 'meh' : '';
+      f.textContent = pct + '%'; meta.appendChild(f);
+    }
+    body.append(words, meta); row.append(sch, body);
+    box.appendChild(row);
+  });
+  rhHighlight(false);
+}
+
+document.getElementById('rhLines').addEventListener('click', e => {
+  const row = e.target.closest('.rh-row');
+  if (!row) return;
+  const i = +row.dataset.line, lines = editor.value.split('\n');
+  let pos = 0; for (let j = 0; j < i; j++) pos += lines[j].length + 1;
+  editor.focus();
+  editor.setSelectionRange(pos, pos + lines[i].length);
+  editor.scrollTop = Math.max(0, PAD_TOP + i * LINE_H_PX - editor.clientHeight / 3);
+  updateGutter(); rhHighlight(false);
+});
+document.getElementById('rhMeter').addEventListener('change', renderRhythm);
+let rhTimer;
+editor.addEventListener('input', () => { pronPrefetchSoon(); clearTimeout(rhTimer); rhTimer = setTimeout(renderRhythm, 250); });
+['keyup', 'click'].forEach(ev => editor.addEventListener(ev, () => {
+  if (document.body.classList.contains('hp-rhythm')) rhHighlight(document.activeElement === editor);
+}));
+loadPronCache();
 
 /* ── Init ── */
 loadSaved();
@@ -1326,6 +1707,7 @@ console.log(greet("world"));
 renderPreview();
 updateStatus();
 updateGutter();
+pronPrefetch();
 </script>
 </body>
 </html>
