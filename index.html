@@ -153,7 +153,21 @@ body {
   color: var(--ink-faint); padding: 6px 18px 5px;
   background: var(--editor-bg); border-bottom: 1px solid var(--border); flex-shrink: 0;
 }
-.pane + .pane { border-left: 1px solid var(--border); }
+/* Draggable divider between editor and preview */
+.split-handle, .panel-handle {
+  width: 7px; flex-shrink: 0; cursor: col-resize; position: relative; z-index: 6;
+  touch-action: none; outline: none;
+}
+.split-handle { margin: 0 -3px; }
+.split-handle::before, .panel-handle::before {
+  content: ""; position: absolute; top: 0; bottom: 0; left: 3px; width: 1px;
+  background: var(--border); transition: background .12s, width .12s, left .12s;
+}
+.split-handle:hover::before, .split-handle:focus-visible::before, .split-handle.drag::before,
+.panel-handle:hover::before, .panel-handle:focus-visible::before, .panel-handle.drag::before {
+  background: var(--accent); width: 3px; left: 2px;
+}
+body.resizing, body.resizing * { cursor: col-resize !important; user-select: none !important; }
 
 /* Editor pane */
 .editor-wrap {
@@ -175,18 +189,18 @@ body {
   border: none;
   outline: none;
   resize: none;
-  padding: 28px 68px 28px 32px;
+  padding: 28px 48px 28px 32px;
   overflow-y: scroll;
   tab-size: 2;
   caret-color: var(--accent);
 }
 #mdEditor::placeholder { color: var(--ink-faint); }
 
-/* Syllable / stress gutter */
+/* Syllable count gutter */
 #syllGutter {
   position: absolute;
   top: 0; right: 0;
-  width: 96px;
+  width: 40px;
   bottom: 0;
   pointer-events: none;
   overflow: hidden;
@@ -208,54 +222,6 @@ body {
 /* Syllable mode colours */
 .syl-badge[data-haiku="5"] { color: #059669; }
 .syl-badge[data-haiku="7"] { color: var(--accent); }
-
-/* Stress mode */
-.stress-dots {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  flex-wrap: nowrap;
-  overflow: hidden;
-  padding: 0 4px;
-}
-.stress-dot {
-  display: inline-block;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.stress-dot.on  { width: 6px; height: 6px; background: var(--accent); }
-.stress-dot.off { width: 4px; height: 4px; background: var(--border-dark); }
-
-/* Match / mismatch tints in stress mode */
-.syl-badge[data-match="yes"] .stress-dot.on  { background: #059669; }
-.syl-badge[data-match="no"]  { background: rgba(251,191,36,.08); }
-.syl-badge[data-match="no"]  .stress-dot.on  { background: #D97706; }
-.syl-badge[data-match="solo"] { opacity: .5; }
-
-/* Gutter mode toggle button in pane label */
-.pane-label {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.gutter-toggle {
-  display: flex;
-  gap: 0;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  overflow: hidden;
-  pointer-events: all;
-}
-.gt-btn {
-  font-size: 9.5px; font-weight: 600; letter-spacing: .3px;
-  padding: 1px 7px; border: none; background: transparent;
-  color: var(--ink-faint); cursor: pointer; font-family: 'DM Sans', sans-serif;
-  transition: .12s; text-transform: uppercase;
-}
-.gt-btn:hover { background: var(--bg); color: var(--ink); }
-.gt-btn.on { background: var(--accent-light); color: var(--accent); }
-.gt-btn + .gt-btn { border-left: 1px solid var(--border); }
 
 /* Preview pane */
 .preview-scroll {
@@ -328,8 +294,8 @@ body {
 .status-bar span { display: flex; align-items: center; gap: 5px; }
 
 /* ── Visibility modes ── */
-body[data-view="editor"] .pane:nth-child(2) { display: none; }
-body[data-view="preview"] .pane:nth-child(1) { display: none; }
+body[data-view="editor"] #previewPane, body[data-view="editor"] #splitHandle { display: none; }
+body[data-view="preview"] #editorPane, body[data-view="preview"] #splitHandle { display: none; }
 
 /* ── Scrollbars ── */
 #mdEditor::-webkit-scrollbar,
@@ -351,10 +317,11 @@ body[data-view="preview"] .pane:nth-child(1) { display: none; }
 
 /* ── Word helper panel (rhymes / synonyms) ── */
 .helper-panel {
-  width: 320px; flex-shrink: 0; display: none; flex-direction: column;
+  position: relative; width: 320px; flex-shrink: 0; display: none; flex-direction: column;
   background: var(--toolbar-bg); border-left: 1px solid var(--border); min-height: 0;
 }
 body.helper-open .helper-panel { display: flex; }
+.panel-handle { position: absolute; left: -3px; top: 0; bottom: 0; }
 .hp-tabs { display: flex; align-items: center; border-bottom: 1px solid var(--border); padding: 0 8px; flex-shrink: 0; }
 .hp-tab {
   padding: 10px 12px; font-size: 12.5px; font-weight: 500; background: none; border: none;
@@ -444,19 +411,22 @@ body.hp-rhythm #hpResults, body.hp-rhythm > .helper-panel > .hp-foot-search { di
 }
 
 /* ── Print (PDF export) ── */
+@page { size: A4; margin: 18mm 20mm; }
 @media print {
-  html, body { height: auto; overflow: visible; }
-  .app-header, .toolbar, .pane:first-child, .status-bar, .helper-panel { display: none !important; }
-  .main-area { display: block; }
-  .pane:last-child { display: block !important; border: none; }
-  .preview-scroll { overflow: visible; padding: 0; background: #fff; }
+  html, body { height: auto !important; overflow: visible !important; display: block !important; background: #fff !important; }
+  .app-header, .toolbar, .status-bar, .helper-panel, .pane-label,
+  #editorPane, .split-handle, .panel-handle { display: none !important; }
+  .main-area { display: block !important; overflow: visible !important; height: auto !important; }
+  #previewPane { display: block !important; overflow: visible !important; border: none !important; width: auto !important; }
+  .preview-scroll { overflow: visible !important; padding: 0 !important; background: #fff !important; }
   .preview-page {
-    box-shadow: none; border-radius: 0;
-    padding: 0; max-width: 100%; width: 100%;
+    box-shadow: none !important; border-radius: 0 !important; background: #fff !important;
+    padding: 0 !important; margin: 0 !important; max-width: none !important; width: 100% !important;
   }
-  #preview { font-size: 11pt; }
-  #preview pre { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  @page { margin: 2cm; }
+  .preview-page, .preview-page * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  #preview pre { white-space: pre-wrap; overflow: visible; word-break: break-word; }
+  #preview h1, #preview h2, #preview h3, #preview h4 { break-after: avoid; }
+  #preview pre, #preview blockquote, #preview tr, #preview img, #preview .katex-display { break-inside: avoid; }
 }
 
 @media (max-width: 700px) {
@@ -570,13 +540,9 @@ body.hp-rhythm #hpResults, body.hp-rhythm > .helper-panel > .hp-foot-search { di
 <!-- Split area -->
 <div class="main-area">
   <!-- Editor Pane -->
-  <div class="pane">
+  <div class="pane" id="editorPane">
     <div class="pane-label">
       Markdown
-      <div class="gutter-toggle">
-        <button class="gt-btn on" id="gtSyl">Syllables</button>
-        <button class="gt-btn" id="gtStress">Stress</button>
-      </div>
     </div>
     <div class="editor-wrap">
       <textarea id="mdEditor" spellcheck="true" placeholder="Start writing in Markdown…
@@ -601,8 +567,10 @@ Use $inline math$ or $$display math$$ for LaTeX.
     </div>
   </div>
 
+  <div class="split-handle" id="splitHandle" role="separator" aria-orientation="vertical" aria-label="Resize editor and preview" tabindex="0" title="Drag to resize · double-click to reset"></div>
+
   <!-- Preview Pane -->
-  <div class="pane">
+  <div class="pane" id="previewPane">
     <div class="pane-label">Preview</div>
     <div class="preview-scroll">
       <div class="preview-page">
@@ -618,6 +586,7 @@ Use $inline math$ or $$display math$$ for LaTeX.
 
   <!-- Word helper panel -->
   <aside class="helper-panel" id="helperPanel" aria-label="Word helper">
+    <div class="panel-handle" id="panelHandle" role="separator" aria-orientation="vertical" aria-label="Resize panel" tabindex="0" title="Drag to resize · double-click to reset"></div>
     <div class="hp-tabs">
       <button class="hp-tab on" data-tab="rhyme">Rhymes</button>
       <button class="hp-tab" data-tab="syn">Synonyms</button>
@@ -812,13 +781,6 @@ function keyScan(k) {
   if (h.length === 1) return { codes: [fn ? 4 : 3], est: true };
   return { codes: h.map(x => x ? 1 : 0), est: true };
 }
-/* Gutter stress (0/1) for a raw word */
-function wordStress(raw) {
-  const out = [];
-  for (const k of wordKeys(raw)) out.push(...keyScan(k).codes.map(c => (c === 0 || c === 4) ? 0 : 1));
-  return out;
-}
-
 /* ── Spelling-based fallback estimate ── */
 function heurSyl(word) {
   word = word.toLowerCase().replace(/[^a-z]/g, '');
@@ -882,36 +844,6 @@ function lineSyllables(line) {
   return text.split(/\s+/).reduce((s, w) => s + countSyllables(w), 0);
 }
 
-/* Full stress pattern for a line: array of 0/1 per syllable */
-function lineStressPattern(line) {
-  const text = stripMd(line);
-  if (!text) return [];
-  const pat = [];
-  for (const w of text.split(/\s+/).filter(Boolean)) {
-    pat.push(...wordStress(w));
-  }
-  return pat;
-}
-
-/* Encode pattern as a string key for comparison */
-const patKey = pat => pat.join('');
-
-/* Find the plurality pattern among non-empty lines */
-function dominantPattern(lines) {
-  const freq = {};
-  for (const line of lines) {
-    const pat = lineStressPattern(line);
-    if (!pat.length) continue;
-    const k = patKey(pat);
-    freq[k] = (freq[k] || 0) + 1;
-  }
-  let best = null, bestN = 0;
-  for (const [k, n] of Object.entries(freq)) {
-    if (n > bestN) { best = k; bestN = n; }
-  }
-  return { dominant: best, count: bestN, total: Object.keys(freq).length };
-}
-
 /* ═══════════════════════════════════════════════════
    GUTTER RENDERING
    ═══════════════════════════════════════════════════ */
@@ -920,74 +852,23 @@ const LINE_H_PX = FONT_SIZE * 1.75;  // matches CSS line-height: 1.75
 const PAD_TOP   = 28;
 const BADGE_H   = LINE_H_PX;
 
-let gutterMode = 'syl'; // 'syl' | 'stress'
-
 function updateGutter() {
   const lines = editor.value.split('\n');
   const scrollTop = editor.scrollTop;
   const gutterH = syllGutter.clientHeight;
   const fragments = [];
-
-  if (gutterMode === 'stress') {
-    // Pre-compute dominant pattern for colour coding
-    const { dominant, count, total } = dominantPattern(lines);
-    const solo = total <= 1; // only one unique pattern → no comparison to make
-
-    for (let i = 0; i < lines.length; i++) {
-      const pat = lineStressPattern(lines[i]);
-      if (!pat.length) continue;
-      const y = PAD_TOP + i * LINE_H_PX - scrollTop;
-      if (y + BADGE_H < 0 || y > gutterH + BADGE_H) continue;
-
-      const k = patKey(pat);
-      let matchAttr = '';
-      if (solo) {
-        matchAttr = ' data-match="solo"';
-      } else if (dominant && k === dominant && count > 1) {
-        matchAttr = ' data-match="yes"';
-      } else if (dominant && k !== dominant) {
-        matchAttr = ' data-match="no"';
-      }
-
-      const dots = pat.map(s =>
-        `<span class="stress-dot ${s ? 'on' : 'off'}"></span>`
-      ).join('');
-
-      fragments.push(
-        `<div class="syl-badge"${matchAttr} style="top:${y.toFixed(1)}px;height:${BADGE_H.toFixed(1)}px">` +
-        `<div class="stress-dots">${dots}</div></div>`
-      );
-    }
-  } else {
-    // Syllable count mode (original)
-    for (let i = 0; i < lines.length; i++) {
-      const syl = lineSyllables(lines[i]);
-      if (syl === 0) continue;
-      const y = PAD_TOP + i * LINE_H_PX - scrollTop;
-      if (y + BADGE_H < 0 || y > gutterH + BADGE_H) continue;
-      const haikuAttr = (syl === 5 || syl === 7) ? ` data-haiku="${syl}"` : '';
-      fragments.push(
-        `<div class="syl-badge"${haikuAttr} style="top:${y.toFixed(1)}px;height:${BADGE_H.toFixed(1)}px">${syl}</div>`
-      );
-    }
+  for (let i = 0; i < lines.length; i++) {
+    const syl = lineSyllables(lines[i]);
+    if (syl === 0) continue;
+    const y = PAD_TOP + i * LINE_H_PX - scrollTop;
+    if (y + BADGE_H < 0 || y > gutterH + BADGE_H) continue;
+    const haikuAttr = (syl === 5 || syl === 7) ? ` data-haiku="${syl}"` : '';
+    fragments.push(
+      `<div class="syl-badge"${haikuAttr} style="top:${y.toFixed(1)}px;height:${BADGE_H.toFixed(1)}px">${syl}</div>`
+    );
   }
-
   syllGutter.innerHTML = fragments.join('');
 }
-
-/* Mode toggle buttons */
-document.getElementById('gtSyl').addEventListener('click', () => {
-  gutterMode = 'syl';
-  document.getElementById('gtSyl').classList.add('on');
-  document.getElementById('gtStress').classList.remove('on');
-  updateGutter();
-});
-document.getElementById('gtStress').addEventListener('click', () => {
-  gutterMode = 'stress';
-  document.getElementById('gtStress').classList.add('on');
-  document.getElementById('gtSyl').classList.remove('on');
-  updateGutter();
-});
 
 /* ── Render markdown → HTML ── */
 function renderPreview() {
@@ -1335,6 +1216,7 @@ function hpSetTab(tab) {
   document.getElementById('btnRhythm').classList.toggle('active', tab === 'rhythm');
   document.body.classList.toggle('hp-rhythm', tab === 'rhythm');
   hpBuildModes();
+  hpApplyWidth();
 }
 
 function hpOpen(tab) {
@@ -1659,6 +1541,84 @@ editor.addEventListener('input', () => { pronPrefetchSoon(); clearTimeout(rhTime
   if (document.body.classList.contains('hp-rhythm')) rhHighlight(document.activeElement === editor);
 }));
 loadPronCache();
+
+/* ═══════════════════════════════════════════════════
+   RESIZABLE PANES (editor | preview, and the side panel)
+   ═══════════════════════════════════════════════════ */
+const LS_SPLIT = 'lelepaMD_split', LS_PANELW = 'lelepaMD_panelw';
+const lsGet = k => { try { return JSON.parse(localStorage.getItem(k)); } catch (_) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} };
+const editorPane = document.getElementById('editorPane');
+const previewPane = document.getElementById('previewPane');
+const splitHandle = document.getElementById('splitHandle');
+const panelHandle = document.getElementById('panelHandle');
+
+function applySplit(r) {            // r = editor share in %, 20..80
+  r = Math.min(80, Math.max(20, r));
+  editorPane.style.flex = r + ' 1 0px';
+  previewPane.style.flex = (100 - r) + ' 1 0px';
+  return r;
+}
+function dragHandle(handle, onMove, onEnd) {
+  handle.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    handle.setPointerCapture(e.pointerId);
+    handle.classList.add('drag'); document.body.classList.add('resizing');
+    const move = ev => onMove(ev.clientX);
+    const up = () => {
+      handle.classList.remove('drag'); document.body.classList.remove('resizing');
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', up);
+      handle.removeEventListener('pointercancel', up);
+      onEnd();
+      updateGutter();
+    };
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', up);
+    handle.addEventListener('pointercancel', up);
+  });
+}
+
+/* Editor | preview */
+let splitR = lsGet(LS_SPLIT) || 50;
+applySplit(splitR);
+dragHandle(splitHandle, x => {
+  const a = editorPane.getBoundingClientRect(), b = previewPane.getBoundingClientRect();
+  splitR = applySplit((x - a.left) / (b.right - a.left) * 100);
+}, () => lsSet(LS_SPLIT, splitR));
+splitHandle.addEventListener('dblclick', () => { splitR = applySplit(50); lsSet(LS_SPLIT, 50); updateGutter(); });
+splitHandle.addEventListener('keydown', e => {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  e.preventDefault();
+  splitR = applySplit(splitR + (e.key === 'ArrowRight' ? 2 : -2));
+  lsSet(LS_SPLIT, splitR); updateGutter();
+});
+
+/* Side panel (separate remembered width for search tabs and the Rhythm tab) */
+const HP_W = lsGet(LS_PANELW) || {};
+const hpMode = () => (HP.tab === 'rhythm' ? 'rhythm' : 'search');
+function hpApplyWidth() {
+  const w = HP_W[hpMode()];
+  hpPanel.style.width = w ? Math.min(w, Math.max(260, window.innerWidth - 80)) + 'px' : '';
+}
+function hpClamp(w) {
+  const max = Math.max(260, document.querySelector('.main-area').clientWidth - 240);
+  return Math.round(Math.min(max, Math.max(260, w)));
+}
+dragHandle(panelHandle, x => {
+  const w = hpClamp(hpPanel.getBoundingClientRect().right - x);
+  HP_W[hpMode()] = w; hpPanel.style.width = w + 'px';
+}, () => lsSet(LS_PANELW, HP_W));
+panelHandle.addEventListener('dblclick', () => { delete HP_W[hpMode()]; hpApplyWidth(); lsSet(LS_PANELW, HP_W); });
+panelHandle.addEventListener('keydown', e => {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  e.preventDefault();
+  const cur = hpPanel.getBoundingClientRect().width;
+  HP_W[hpMode()] = hpClamp(cur + (e.key === 'ArrowLeft' ? 20 : -20));
+  hpApplyWidth(); lsSet(LS_PANELW, HP_W);
+});
+window.addEventListener('resize', hpApplyWidth);
 
 /* ── Init ── */
 loadSaved();
